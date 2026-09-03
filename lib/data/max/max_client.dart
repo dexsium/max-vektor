@@ -283,8 +283,18 @@ class MaxClient {
       'deviceId': deviceId,
     });
     if (f.cmd != 1) {
-      _log.w('${MvTag.init} INIT отвергнут сервером cmd=${f.cmd}');
-      throw MaxError('INIT failed cmd=${f.cmd}');
+      final r = _rejection(f);
+      _log.w(
+        '${MvTag.init} INIT отвергнут сервером: cmd=${f.cmd} '
+        'error=${r.code ?? '-'} message=${r.message ?? '-'}',
+      );
+      throw MaxError(
+        r.localized ??
+            r.code ??
+            'INIT отклонён сервером (cmd=${f.cmd}). Вероятно, устарела '
+                'версия клиента: app ${MaxProto.appVersion}, '
+                'proto v${MaxProto.protoVersion}.',
+      );
     }
     _log.i('${MvTag.init} INIT принят');
   }
@@ -312,12 +322,52 @@ class MaxClient {
 
   // ─────────────────────────── auth ───────────────────────────
 
+  /// Причина отказа из ответа сервера.
+  ///
+  /// На cmd != 1 сервер кладёт в payload structured error:
+  /// `{error, message, localizedMessage, title}`. Раньше эта информация
+  /// терялась, и пользователь видел бесполезное «cmd=3».
+  ({String? localized, String? code, String? message}) _rejection(MaxFrame f) {
+    final d = f.decoded;
+    if (d is! Map) return (localized: null, code: null, message: null);
+    final m = d.map((k, v) => MapEntry(k.toString(), v));
+    String? pick(String key) {
+      final v = m[key]?.toString();
+      return (v == null || v.isEmpty) ? null : v;
+    }
+
+    return (
+      localized: pick('localizedMessage'),
+      code: pick('error'),
+      message: pick('message'),
+    );
+  }
+
+  /// Единый выход по отказу: пишет причину в лог (уровень warning, поэтому
+  /// видно и в release) и бросает понятное пользователю сообщение.
+  Never _failWith(MaxFrame f, String op) {
+    final r = _rejection(f);
+    _log.w(
+      '${MvTag.auth} $op отклонён сервером: cmd=${f.cmd} '
+      'error=${r.code ?? '-'} message=${r.message ?? '-'}',
+    );
+    if (r.localized != null) throw MaxLoginFailed(r.localized!);
+    if (r.code != null) throw MaxLoginFailed('$op: ${r.code}');
+    if (r.message != null) throw MaxLoginFailed('$op: ${r.message}');
+    throw MaxLoginFailed(
+      '$op отклонён сервером (cmd=${f.cmd}) без объяснения причины. '
+      'Обычно так отвечают на устаревшую версию клиента '
+      '(app ${MaxProto.appVersion}, proto v${MaxProto.protoVersion}) '
+      'или на слишком частые попытки входа с одного номера.',
+    );
+  }
+
   Future<String> startAuthSms(String phone) async {
     final f = await _request(MaxOp.authRequest, {
       'phone': phone,
       'type': 'START_AUTH',
     });
-    if (f.cmd != 1) throw MaxLoginFailed('AUTH_REQUEST cmd=${f.cmd}');
+    if (f.cmd != 1) _failWith(f, 'AUTH_REQUEST');
     final t = RawParsers.findLongToken(f.body);
     if (t == null) throw const MaxLoginFailed('verify token not extracted');
     return t;
@@ -334,27 +384,14 @@ class MaxClient {
       'authTokenType': 'CHECK_CODE',
     });
     if (f.cmd != 1) {
-      // Сервер возвращает structured error в decoded payload:
-      //  { error, message, localizedMessage, title }
-      // Покажем пользователю localizedMessage если он есть.
-      final d = f.decoded;
-      if (d is Map) {
-        final m = d.map((k, v) => MapEntry(k.toString(), v));
-        final loc = m['localizedMessage']?.toString();
-        final err = m['error']?.toString();
-        if (loc != null && loc.isNotEmpty) {
-          throw MaxLoginFailed(loc);
-        }
-        if (err != null && err.isNotEmpty) {
-          throw MaxLoginFailed('Сервер MAX: $err');
-        }
-      }
-      if (f.cmd == 3) {
+      final r = _rejection(f);
+      if (r.localized == null && r.code == null && f.cmd == 3) {
+        _log.w('${MvTag.auth} AUTH_CONFIRM отклонён: cmd=3 без деталей');
         throw const MaxLoginFailed(
           'SMS-код неверный или истёк. Запросите новый код.',
         );
       }
-      throw MaxLoginFailed('AUTH_CONFIRM cmd=${f.cmd}');
+      _failWith(f, 'AUTH_CONFIRM');
     }
 
     final authToken = RawParsers.findLongToken(f.body);
@@ -375,7 +412,7 @@ class MaxClient {
       'trackId': trackId,
       'password': password,
     });
-    if (f.cmd != 1) throw MaxLoginFailed('2FA cmd=${f.cmd}');
+    if (f.cmd != 1) _failWith(f, '2FA');
     final t = RawParsers.findLongToken(f.body);
     if (t == null) throw const MaxLoginFailed('auth token missing after 2FA');
     return t;
@@ -406,7 +443,7 @@ class MaxClient {
       'presenceSync': 0,
       'draftsSync': 0,
     });
-    if (f.cmd != 1) throw MaxLoginFailed('LOGIN cmd=${f.cmd}');
+    if (f.cmd != 1) _failWith(f, 'LOGIN');
     _token = token;
     _sinceLogin
       ..reset()
