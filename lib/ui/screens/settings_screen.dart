@@ -7,6 +7,7 @@ import '../../state/session_controller.dart';
 import '../../state/theme_controller.dart';
 import 'accounts_screen.dart';
 import 'devices_screen.dart';
+import 'data_saver_screen.dart';
 import 'security_screen.dart';
 import 'diagnostics_screen.dart';
 import 'profile_edit_screen.dart';
@@ -87,7 +88,7 @@ class SettingsScreen extends ConsumerWidget {
               _Tile(
                 icon: Icons.battery_saver_outlined,
                 title: 'Экономия батареи и сети',
-                onTap: () => _soon(context),
+                onTap: () => _push(context, const DataSaverScreen()),
               ),
               _Tile(
                 icon: Icons.storage_outlined,

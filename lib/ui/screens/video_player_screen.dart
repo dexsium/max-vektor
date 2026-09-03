@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
+
+import '../../state/media_prefs_controller.dart';
 
 /// Полноэкранный плеер видео (нативный: AVPlayer на iOS, ExoPlayer на
 /// Android). Открывается по тапу на видео-вложение.
 ///
 /// Логика как в официальном приложении: тап по превью → плеер, тап по
 /// экрану переключает play/pause, снизу — прогресс и время.
-class VideoPlayerScreen extends StatefulWidget {
+class VideoPlayerScreen extends ConsumerStatefulWidget {
   const VideoPlayerScreen({super.key, required this.url, this.title});
 
   /// Прямая ссылка на поток (videoUrl из attach) — MP4 или HLS.
@@ -14,10 +17,11 @@ class VideoPlayerScreen extends StatefulWidget {
   final String? title;
 
   @override
-  State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
+  ConsumerState<VideoPlayerScreen> createState() =>
+      _VideoPlayerScreenState();
 }
 
-class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
   late final VideoPlayerController _controller;
   bool _ready = false;
   String? _error;
@@ -29,7 +33,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       ..initialize().then((_) {
         if (!mounted) return;
         setState(() => _ready = true);
-        _controller.play();
+        // Автозапуск только если в «Экономии» выбрано «Всегда».
+        // По Wi-Fi/Никогда открываем на паузе — тап запускает.
+        if (ref.read(mediaPrefsProvider).videoAutoplay == MediaAuto.always) {
+          _controller.play();
+        }
       }).catchError((Object e) {
         if (!mounted) return;
         setState(() => _error = 'Не удалось воспроизвести видео');
