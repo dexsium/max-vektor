@@ -41,6 +41,12 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
+      # Podfile читает ios/Flutter/Generated.xcconfig (там FLUTTER_ROOT).
+      # Этот файл создаёт НЕ `pub get`, а конфигурационный шаг сборки —
+      # без него `pod install` падает сразу.
+      - name: generate iOS config
+        run: flutter build ios --release --no-codesign --config-only
+
       - name: pod install
         working-directory: ios
         run: pod install --repo-update
