@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -134,3 +135,31 @@ class MediaPrefsController extends Notifier<MediaPrefs> {
 
 final mediaPrefsProvider =
     NotifierProvider<MediaPrefsController, MediaPrefs>(MediaPrefsController.new);
+
+/// Текущий тип подключения. Обновляется системным потоком connectivity.
+final connectivityProvider = StreamProvider<List<ConnectivityResult>>((ref) {
+  final c = Connectivity();
+  // Отдаём сначала текущее состояние, затем изменения.
+  return c.onConnectivityChanged.asBroadcastStream();
+});
+
+/// Устройство сейчас на Wi-Fi (или Ethernet — тоже безлимитная сеть).
+Future<bool> isOnWifi() async {
+  try {
+    final r = await Connectivity().checkConnectivity();
+    return r.contains(ConnectivityResult.wifi) ||
+        r.contains(ConnectivityResult.ethernet);
+  } catch (_) {
+    // Не смогли определить — считаем, что не Wi-Fi (экономим трафик).
+    return false;
+  }
+}
+
+/// Нужно ли авто-грузить/запускать медиа при режиме [mode] и текущей сети.
+///
+/// `Всегда` → да; `Никогда` → нет; `По Wi-Fi` → только если [onWifi].
+bool shouldAutoLoad(MediaAuto mode, {required bool onWifi}) => switch (mode) {
+      MediaAuto.always => true,
+      MediaAuto.never => false,
+      MediaAuto.wifi => onWifi,
+    };

@@ -33,11 +33,7 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
       ..initialize().then((_) {
         if (!mounted) return;
         setState(() => _ready = true);
-        // Автозапуск только если в «Экономии» выбрано «Всегда».
-        // По Wi-Fi/Никогда открываем на паузе — тап запускает.
-        if (ref.read(mediaPrefsProvider).videoAutoplay == MediaAuto.always) {
-          _controller.play();
-        }
+        _maybeAutoplay();
       }).catchError((Object e) {
         if (!mounted) return;
         setState(() => _error = 'Не удалось воспроизвести видео');
@@ -47,6 +43,17 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
 
   void _tick() {
     if (mounted) setState(() {});
+  }
+
+  /// Автозапуск с учётом режима «Экономии» и реального типа сети:
+  /// «Всегда» — всегда; «По Wi-Fi» — только на Wi-Fi/Ethernet;
+  /// «Никогда» — открываем на паузе (тап запускает).
+  Future<void> _maybeAutoplay() async {
+    final mode = ref.read(mediaPrefsProvider).videoAutoplay;
+    if (mode == MediaAuto.never) return;
+    final onWifi = mode == MediaAuto.wifi ? await isOnWifi() : true;
+    if (!mounted) return;
+    if (shouldAutoLoad(mode, onWifi: onWifi)) _controller.play();
   }
 
   @override

@@ -1,7 +1,7 @@
 name: max_vektor
 description: "Max Vektor — неофициальный клиент мессенджера MAX (iOS/Android)"
 publish_to: 'none'
-version: 0.5.0+1
+version: 0.5.1+1
 
 environment:
   sdk: ^3.7.2
@@ -43,6 +43,10 @@ dependencies:
   # Сканер QR для входа по QR-коду (op 290 AUTH_QR_APPROVE): залогиненный
   # клиент сканирует QR другого устройства и авторизует его вход.
   mobile_scanner: ^5.2.3
+
+  # Определение типа сети (Wi-Fi/мобильная) для режима автозагрузки
+  # «По Wi-Fi»: медиа стартует/грузится только на Wi-Fi.
+  connectivity_plus: ^6.1.0
 
   # Нативный плеер видео (iOS AVPlayer / Android ExoPlayer).
   video_player: ^2.9.2
