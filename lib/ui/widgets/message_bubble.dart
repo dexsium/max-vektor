@@ -13,6 +13,7 @@ class MessageBubble extends StatelessWidget {
     this.messageServerId,
     this.senderLabel,
     this.showSenderName = true,
+    this.forwardLabel,
   });
   final MaxMessage message;
 
@@ -34,6 +35,10 @@ class MessageBubble extends StatelessWidget {
   /// Показывать ли имя отправителя. В серии подряд идущих сообщений одного
   /// автора имя рисуется только над первым (как в официальном приложении).
   final bool showSenderName;
+
+  /// Готовая подпись источника форварда (имя канала/чата или резолвнутое имя
+  /// автора при форварде от лички). Если null — берём [MaxMessage.forwardFromName].
+  final String? forwardLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -84,8 +89,7 @@ class MessageBubble extends StatelessWidget {
               ),
               const SizedBox(height: 2),
             ],
-            if ((message.forwardFromName?.isNotEmpty ?? false))
-              _forwardBlock(scheme, fg),
+            if (_forwardName != null) _forwardBlock(scheme, fg),
             if (hasReply) _replyBlock(fg),
             if (message.attaches.isNotEmpty) _attachList(),
             if (message.text.isNotEmpty) ...[
@@ -167,6 +171,14 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
+  /// Эффективное имя источника форварда: явная подпись из UI или chatName.
+  String? get _forwardName {
+    final l = forwardLabel?.trim();
+    if (l != null && l.isNotEmpty) return l;
+    final n = message.forwardFromName?.trim();
+    return (n != null && n.isNotEmpty) ? n : null;
+  }
+
   /// «Переслано: <имя источника>» — заголовок над пересланным содержимым,
   /// как в официальном приложении.
   Widget _forwardBlock(ColorScheme scheme, Color fg) {
@@ -190,7 +202,7 @@ class MessageBubble extends StatelessWidget {
               const SizedBox(width: 4),
               Flexible(
                 child: Text(
-                  message.forwardFromName!,
+                  _forwardName!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

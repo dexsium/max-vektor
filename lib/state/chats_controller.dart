@@ -163,6 +163,24 @@ final chatSenderNamesProvider =
   return out;
 });
 
+/// Имя пользователя по id (для автора пересланного сообщения от лички).
+/// Сначала локальный контакт, затем догрузка через CONTACT_INFO (op 32).
+/// null, если имя так и не удалось получить.
+final userDisplayNameProvider =
+    FutureProvider.family<String?, int>((ref, userId) async {
+  final db = await ref.read(appDatabaseProvider.future);
+  var name = (await db.contact(userId))?.name;
+  if (name != null && name.isNotEmpty) return name;
+  try {
+    final contacts = await ref.read(contactsRepositoryProvider.future);
+    await contacts.refresh([userId]);
+    name = (await db.contact(userId))?.name;
+  } catch (_) {
+    // Оффлайн или сервер не отдал — имя останется неизвестным.
+  }
+  return (name != null && name.isNotEmpty) ? name : null;
+});
+
 /// Подсказка «этот chatId — диалог 1:1 с этим peerUserId», выставляется
 /// навигацией (ContactsScreen._openChat) ДО построения ChatHistoryController.
 /// Нужна, чтобы отправка в новый диалог шла по userId, а не по chatId.

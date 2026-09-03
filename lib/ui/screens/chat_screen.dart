@@ -447,6 +447,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 messageServerId: m.id,
                 senderLabel: _senderLabel(m),
                 showSenderName: it.firstInRun,
+                forwardLabel: _forwardLabel(m),
                 onRetry: m.status == MessageStatus.failed
                     ? () => ref
                         .read(chatHistoryProvider(widget.chatId).notifier)
@@ -478,6 +479,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       },
       ),
     );
+  }
+
+  /// Подпись источника пересланного сообщения: имя канала/чата (chatName)
+  /// либо, для форварда от лички, резолвнутое по контактам имя автора.
+  String? _forwardLabel(MaxMessage m) {
+    final name = m.forwardFromName?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    final id = m.forwardFromId;
+    if (id == null) return null;
+    return ref.watch(userDisplayNameProvider(id)).maybeWhen(
+          data: (n) => (n != null && n.isNotEmpty) ? n : 'Пользователь',
+          orElse: () => 'Пользователь',
+        );
   }
 
   /// Кружок-аватар отправителя с инициалом и стабильным цветом по id.

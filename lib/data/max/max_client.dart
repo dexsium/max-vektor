@@ -1366,6 +1366,7 @@ class MaxClient {
     var attaches = const <Map<String, dynamic>>[];
     int? cid;
     String? forwardName;
+    int? forwardId;
 
     final d = f.decoded;
     if (d is Map) {
@@ -1379,7 +1380,9 @@ class MaxClient {
         msgId = _toInt(mm['id']);
         timeMs = _toInt(mm['time']);
         cid = _toInt(mm['cid']);
-        forwardName = forwardFromLink(mm['link']);
+        final fwd = forwardFromLink(mm['link']);
+        forwardName = fwd.name;
+        forwardId = fwd.senderId;
         final at = mm['attaches'] ?? mm['attachments'];
         if (at is List) {
           attaches = at
@@ -1431,20 +1434,32 @@ class MaxClient {
       attaches: attaches,
       cid: cid,
       forwardFromName: forwardName,
+      forwardFromId: forwardId,
     );
   }
 
-  /// Имя источника пересланного сообщения из объекта `link` серверного
-  /// сообщения. Структура сверена с APK (pma.java): `link` = {type, chatId,
-  /// message, chatName, chatLink, chatIconUrl}. Для type=FORWARD показываем
-  /// имя источника — chatName (канал/чат). null, если это не форвард.
-  static String? forwardFromLink(Object? link) {
-    if (link is! Map) return null;
+  /// Источник пересланного сообщения из объекта `link` серверного сообщения.
+  /// Структура сверена с APK (pma.java): `link` = {type, chatId, message,
+  /// chatName, chatLink, chatIconUrl}. Для type=FORWARD:
+  /// * `name` = chatName — имя канала/чата-источника (форвард из чата);
+  /// * `senderId` = sender вложенного `message` — автор (форвард от лички),
+  ///   имя которого резолвится по контактам в UI.
+  /// Возвращает (null, null), если это не форвард.
+  static ({String? name, int? senderId}) forwardFromLink(Object? link) {
+    if (link is! Map) return (name: null, senderId: null);
     final lm = link.map((k, v) => MapEntry(k.toString(), v));
     final type = lm['type']?.toString().toUpperCase();
-    if (type != 'FORWARD') return null;
+    if (type != 'FORWARD') return (name: null, senderId: null);
     final name = lm['chatName']?.toString().trim();
-    return (name != null && name.isNotEmpty) ? name : null;
+    int? senderId;
+    final nested = lm['message'];
+    if (nested is Map) {
+      senderId = _toInt(nested['sender']);
+    }
+    return (
+      name: (name != null && name.isNotEmpty) ? name : null,
+      senderId: senderId,
+    );
   }
 
   Map<String, dynamic> _parseContact(MaxFrame f) {
