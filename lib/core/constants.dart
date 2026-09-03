@@ -49,6 +49,11 @@ class MaxOp {
   /// Источник: модуль авторизации веб-клиента web.max.ru.
   static const int register = 23;
 
+  /// Авто-удаление профиля по неактивности:
+  /// PROFILE_DELETE_TIME (op 200) — задать срок (app.privacy.inactive.ttl:
+  /// 1M/3M/6M). Источник: APK (jl4.java, izi.java).
+  static const int profileDeleteTime = 200;
+
   /// Создание сессии капчи перед запросом кода:
   /// `{source: 'auth', identifier: <phone>}` → `{link}`.
   /// Источник: модуль авторизации веб-клиента web.max.ru.

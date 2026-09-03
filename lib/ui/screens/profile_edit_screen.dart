@@ -30,6 +30,15 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   String? _avatarUrl;
   String? _pickedAvatarPath;
 
+  /// Срок авто-удаления по неактивности: 1M/3M/6M (по умолчанию 6M, как в MAX).
+  String _inactiveTtl = '6M';
+
+  static String _ttlLabel(String ttl) => switch (ttl) {
+        '1M' => '1 месяц',
+        '3M' => '3 месяца',
+        _ => '6 месяцев',
+      };
+
   @override
   void initState() {
     super.initState();
@@ -134,7 +143,14 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                 _field(_lastCtrl, 'Фамилия'),
                 const SizedBox(height: 12),
                 _field(_aboutCtrl, 'О себе', maxLines: 3),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+                _tile(
+                  icon: Icons.auto_delete_outlined,
+                  title: 'Удалить профиль',
+                  subtitle: _ttlLabel(_inactiveTtl),
+                  onTap: _pickTtl,
+                ),
+                const SizedBox(height: 12),
                 _dangerTile(
                   icon: Icons.logout,
                   title: 'Выйти из профиля',
@@ -248,6 +264,67 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         ),
       ),
       onChanged: (_) => setState(() {}),
+    );
+  }
+
+  Future<void> _pickTtl() async {
+    final chosen = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'Удалить профиль, если он неактивен',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            for (final ttl in const ['1M', '3M', '6M'])
+              ListTile(
+                title: Text(_ttlLabel(ttl)),
+                trailing: _inactiveTtl == ttl
+                    ? Icon(Icons.check,
+                        color: Theme.of(ctx).colorScheme.primary)
+                    : null,
+                onTap: () => Navigator.of(ctx).pop(ttl),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (chosen == null || chosen == _inactiveTtl) return;
+    setState(() => _inactiveTtl = chosen);
+    try {
+      await ref.read(maxClientProvider).setInactiveDeleteTtl(chosen);
+      if (mounted) AppSnack.show(context, 'Срок обновлён', icon: Icons.check);
+    } catch (e) {
+      if (mounted) {
+        AppSnack.show(context, 'Не удалось задать срок: $e', error: true);
+      }
+    }
+  }
+
+  Widget _tile({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required VoidCallback onTap,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: scheme.primary),
+        title: Text(title),
+        subtitle: subtitle == null ? null : Text(subtitle),
+        trailing: Icon(Icons.chevron_right, color: scheme.outline),
+        onTap: onTap,
+      ),
     );
   }
 

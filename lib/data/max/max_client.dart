@@ -947,6 +947,20 @@ class MaxClient {
     return _asMap(f.decoded);
   }
 
+  /// Задать срок авто-удаления профиля по неактивности (op 200).
+  /// [ttl] ∈ {'1M','3M','6M'} — как в официальном клиенте
+  /// (ключ app.privacy.inactive.ttl). Ответ пишется в лог диагностики —
+  /// точная схема op 200 не проверена вживую, при расхождении поправим.
+  Future<Map<String, dynamic>> setInactiveDeleteTtl(String ttl) async {
+    final f = await _request(MaxOp.profileDeleteTime, {
+      'settings': {'app.privacy.inactive.ttl': ttl},
+    });
+    _log.i('${MvTag.auth} inactive.ttl=$ttl → cmd=${f.cmd} '
+        'decoded=${_redact(f.decoded)}');
+    if (f.cmd != 1) _failWith(f, 'PROFILE_DELETE_TIME');
+    return _asMap(f.decoded);
+  }
+
   Future<Map<String, dynamic>> requestPhotoUpload({
     int count = 1,
     bool profile = false,

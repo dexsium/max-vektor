@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'calls_list_screen.dart';
 import 'chats_list_screen.dart';
 import 'contacts_screen.dart';
 import 'settings_screen.dart';
 
-/// Корневой экран приложения после успешного логина.
-/// Bottom navigation: Чаты, Контакты, Настройки. Таб «Звонки» убран —
-/// real-time медиа MAX (WebRTC-обвязка) не реверснута.
+/// Корневой экран после входа. Нижнее меню как в официальном приложении:
+/// Контакты, Звонки, Чаты, Настройки. По умолчанию открыты Чаты.
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
 
@@ -16,11 +16,13 @@ class MainShell extends ConsumerStatefulWidget {
 }
 
 class _MainShellState extends ConsumerState<MainShell> {
-  int _index = 0;
+  // Порядок вкладок: 0 Контакты, 1 Звонки, 2 Чаты, 3 Настройки.
+  int _index = 2;
 
   static const _pages = <Widget>[
-    ChatsListScreen(),
     ContactsScreen(),
+    CallsListScreen(),
+    ChatsListScreen(),
     SettingsScreen(),
   ];
 
@@ -30,17 +32,24 @@ class _MainShellState extends ConsumerState<MainShell> {
       body: IndexedStack(index: _index, children: _pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
+        height: 64,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people),
+            label: 'Контакты',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.call_outlined),
+            selectedIcon: Icon(Icons.call),
+            label: 'Звонки',
+          ),
           NavigationDestination(
             icon: Icon(Icons.chat_bubble_outline),
             selectedIcon: Icon(Icons.chat_bubble),
             label: 'Чаты',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.contacts_outlined),
-            selectedIcon: Icon(Icons.contacts),
-            label: 'Контакты',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
