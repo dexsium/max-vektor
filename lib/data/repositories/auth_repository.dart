@@ -270,15 +270,16 @@ class AuthRepository {
 
   /// Завершение ИНТЕРАКТИВНОГО входа (код, 2FA, регистрация).
   ///
-  /// После получения постоянного токена шлём LOGIN (op 19) — как это делает
-  /// официальный клиент для синхронизации сессии. БЕЗ него сервер сбрасывает
-  /// сокет (сессия не досоздана) и приложение уходит в бесконечный reconnect.
-  /// Если сессия уже онлайн, login() терпимо принимает proto.state как успех.
+  /// Сервер уже перевёл сессию в ONLINE и вернул постоянный токен. Второй
+  /// LOGIN (op 19) на этом же сокете он отвергает с `proto.payload`, поэтому
+  /// сессию помечаем вошедшей локально ([MaxClient.markLoggedIn]). op 19 с
+  /// сохранённым токеном уходит уже на СВЕЖЕМ соединении — при
+  /// переподключении и восстановлении сессии после перезапуска.
   Future<void> _completeLogin(String token) async {
     _log.i('${MvTag.auth} вход завершён, токен ${mvRedact(token)} сохранён');
     await storage.writeToken(token);
     await storage.writeTokenKind(_authTokenKind);
-    await client.login(token);
+    client.markLoggedIn(token);
     await _captureProfile();
   }
 
