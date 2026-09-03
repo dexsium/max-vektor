@@ -8,7 +8,15 @@ import '../local/secure_storage.dart';
 import '../max/contact_name.dart';
 import '../max/max_client.dart';
 
-enum AuthState { unauthenticated, awaitingSms, awaiting2fa, authenticated }
+/// [awaitingName] — код принят, но номер ещё не зарегистрирован в MAX:
+/// сервер ждёт имя (op 23), после чего аккаунт создаётся.
+enum AuthState {
+  unauthenticated,
+  awaitingSms,
+  awaiting2fa,
+  awaitingName,
+  authenticated,
+}
 
 class AuthRepository {
   AuthRepository({
@@ -23,6 +31,10 @@ class AuthRepository {
 
   String? _verifyToken;
   String? _trackId;
+
+  /// Токен регистрации (`tokenAttrs.REGISTER.token`) — живёт между вводом
+  /// кода и вводом имени.
+  String? _registerToken;
 
   /// Имя из профиля MAX, если его удалось загрузить при последнем входе.
   /// Нужно переключателю аккаунтов, чтобы подписать карточку без лишнего
@@ -161,9 +173,31 @@ class AuthRepository {
       await _completeLogin(r.authToken!);
       return AuthState.authenticated;
     }
+    if (r.registerToken != null) {
+      _registerToken = r.registerToken;
+      return AuthState.awaitingName;
+    }
     _log.i('${MvTag.auth} требуется 2FA-пароль');
     _trackId = r.trackId;
     return AuthState.awaiting2fa;
+  }
+
+  /// Завершить регистрацию нового аккаунта именем (op 23).
+  Future<void> submitRegistration({
+    required String firstName,
+    String? lastName,
+  }) async {
+    final token = _registerToken;
+    if (token == null) throw StateError('Регистрация не начата');
+    final authToken = await _withFreshConnection(
+      () => client.completeRegistration(
+        token: token,
+        firstName: firstName,
+        lastName: lastName,
+      ),
+    );
+    _registerToken = null;
+    await _completeLogin(authToken);
   }
 
   /// После ошибки `cmd=3` (verify-token истёк/использован) UI должен

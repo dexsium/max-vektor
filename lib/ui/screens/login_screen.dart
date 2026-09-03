@@ -3,9 +3,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../state/session_controller.dart';
+import '../widgets/code_input.dart';
+import '../widgets/vektor_mark.dart';
 
+/// Экран входа и регистрации.
+///
+/// Шаги идут по состоянию сессии: номер → код → (имя, если аккаунта ещё
+/// нет) → (пароль 2FA, если включён). Оформление собственное: знак «V» из
+/// иконки приложения, без брендинга официального MAX.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -13,16 +21,17 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-enum _Mode { sms, token }
-
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _phoneCtrl = TextEditingController();
   final _codeCtrl = TextEditingController();
   final _pwCtrl = TextEditingController();
   final _tokenCtrl = TextEditingController();
+  final _firstNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
+
   bool _busy = false;
   bool _pwVisible = false;
-  _Mode _mode = _Mode.sms;
+  bool _tokenMode = false;
 
   /// Тикает раз в секунду, пока идёт отсчёт до повторного запроса кода.
   Timer? _resendTicker;
@@ -34,6 +43,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _codeCtrl.dispose();
     _pwCtrl.dispose();
     _tokenCtrl.dispose();
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
     super.dispose();
   }
 
@@ -50,64 +61,262 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final session = ref.watch(sessionProvider);
     final ctrl = ref.read(sessionProvider.notifier);
+    final step = _tokenMode ? _Step.token : _stepOf(session);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Вход в MAX')),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // переключатель способа входа
-              SegmentedButton<_Mode>(
-                segments: const [
-                  ButtonSegment(value: _Mode.sms, label: Text('По SMS')),
-                  ButtonSegment(value: _Mode.token, label: Text('По токену')),
-                ],
-                selected: {_mode},
-                onSelectionChanged: _busy
-                    ? null
-                    : (s) => setState(() => _mode = s.first),
-              ),
-              const SizedBox(height: 20),
-
-              if (session.error != null) ...[
-                Card(
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Text(
-                      session.error!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onErrorContainer,
-                      ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _header(step),
+                  const SizedBox(height: 28),
+                  if (session.error != null) ...[
+                    _ErrorBanner(text: session.error!),
+                    const SizedBox(height: 16),
+                  ],
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    child: Column(
+                      key: ValueKey(step),
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: _body(step, session, ctrl),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              if (_mode == _Mode.token)
-                ..._tokenForm(ctrl)
-              else
-                ..._smsForm(session, ctrl),
-            ],
+                  const SizedBox(height: 24),
+                  _footer(step, ctrl),
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  // ─────────────── вход по токену ───────────────
-  List<Widget> _tokenForm(SessionController ctrl) {
+  _Step _stepOf(SessionState session) => switch (session.authFlow) {
+        AuthState.awaitingSms => _Step.code,
+        AuthState.awaitingName => _Step.name,
+        AuthState.awaiting2fa => _Step.password,
+        _ => _Step.phone,
+      };
+
+  // ─────────────────────────── шапка ───────────────────────────
+
+  Widget _header(_Step step) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        const VektorMark(size: 76),
+        const SizedBox(height: 18),
+        Text(
+          _title(step),
+          textAlign: TextAlign.center,
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          _subtitle(step),
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _title(_Step step) => switch (step) {
+        _Step.phone => AppMeta.name,
+        _Step.code => 'Введите код',
+        _Step.name => 'Как вас зовут?',
+        _Step.password => 'Пароль двухфакторной защиты',
+        _Step.token => 'Вход по токену',
+      };
+
+  String _subtitle(_Step step) {
+    final session = ref.read(sessionProvider);
+    return switch (step) {
+      _Step.phone => '${AppMeta.disclaimer}. Введите номер телефона — '
+          'пришлём код подтверждения.',
+      // Канал доставки сервер не называет: при установленном официальном
+      // приложении код обычно приходит push-ом в него, а не отдельной SMS.
+      _Step.code => 'Отправили код на ${session.phone ?? 'ваш номер'}. '
+          'Он приходит в SMS или в официальное приложение MAX.',
+      _Step.name => 'Этого номера ещё нет в MAX. Укажите имя — '
+          'и аккаунт будет создан.',
+      _Step.password => 'На аккаунте включён пароль. Введите его, '
+          'чтобы завершить вход.',
+      _Step.token => 'Готовый auth-token из веб-версии web.max.ru: '
+          'DevTools → Application → хранилище. Код подтверждения не нужен.',
+    };
+  }
+
+  // ─────────────────────────── шаги ───────────────────────────
+
+  List<Widget> _body(_Step step, SessionState session, SessionController c) {
+    return switch (step) {
+      _Step.phone => _phoneStep(c),
+      _Step.code => _codeStep(session, c),
+      _Step.name => _nameStep(c),
+      _Step.password => _passwordStep(c),
+      _Step.token => _tokenStep(c),
+    };
+  }
+
+  List<Widget> _phoneStep(SessionController ctrl) {
     return [
-      Text(
-        'Вставьте auth-token аккаунта MAX (например из веб-версии '
-        'web.max.ru: DevTools → Application → хранилище). SMS не нужен.',
-        style: Theme.of(context).textTheme.bodyMedium,
+      TextField(
+        controller: _phoneCtrl,
+        keyboardType: TextInputType.phone,
+        autofillHints: const [AutofillHints.telephoneNumber],
+        decoration: const InputDecoration(
+          labelText: 'Номер телефона',
+          hintText: '+79991234567',
+          prefixIcon: Icon(Icons.phone_outlined),
+        ),
+        onSubmitted: _busy
+            ? null
+            : (_) => _run(() => ctrl.requestSms(_phoneCtrl.text.trim())),
       ),
-      const SizedBox(height: 16),
+      const SizedBox(height: 20),
+      _PrimaryButton(
+        label: 'Получить код',
+        busy: _busy,
+        onPressed: () => _run(() => ctrl.requestSms(_phoneCtrl.text.trim())),
+      ),
+    ];
+  }
+
+  List<Widget> _codeStep(SessionState session, SessionController ctrl) {
+    _ensureResendTicker(session);
+    final countdown = _resendCountdown(session);
+    final length = session.codeLength ?? 6;
+    final attempts = session.attemptsLeft;
+
+    return [
+      CodeInput(
+        controller: _codeCtrl,
+        length: length,
+        enabled: !_busy,
+        hasError: session.error != null,
+        onCompleted: (code) => _run(() => ctrl.submitSmsCode(code)),
+      ),
+      const SizedBox(height: 20),
+      _PrimaryButton(
+        label: 'Подтвердить',
+        busy: _busy,
+        onPressed: () => _run(() => ctrl.submitSmsCode(_codeCtrl.text.trim())),
+      ),
+      const SizedBox(height: 8),
+      TextButton(
+        onPressed: (_busy || countdown > 0)
+            ? null
+            : () {
+                _codeCtrl.clear();
+                _run(() => ctrl.resendSms());
+              },
+        child: Text(
+          countdown > 0
+              ? 'Запросить код заново через $countdown с'
+              : 'Запросить код заново',
+        ),
+      ),
+      if (attempts != null)
+        Text(
+          'Осталось запросов кода: $attempts',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+    ];
+  }
+
+  List<Widget> _nameStep(SessionController ctrl) {
+    return [
+      TextField(
+        controller: _firstNameCtrl,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        autofillHints: const [AutofillHints.givenName],
+        decoration: const InputDecoration(
+          labelText: 'Имя',
+          prefixIcon: Icon(Icons.person_outline),
+        ),
+      ),
+      const SizedBox(height: 12),
+      TextField(
+        controller: _lastNameCtrl,
+        textCapitalization: TextCapitalization.words,
+        autofillHints: const [AutofillHints.familyName],
+        decoration: const InputDecoration(
+          labelText: 'Фамилия (необязательно)',
+          prefixIcon: Icon(Icons.badge_outlined),
+        ),
+        onSubmitted: _busy ? null : (_) => _submitRegistration(ctrl),
+      ),
+      const SizedBox(height: 20),
+      _PrimaryButton(
+        label: 'Создать аккаунт',
+        busy: _busy,
+        onPressed: () => _submitRegistration(ctrl),
+      ),
+    ];
+  }
+
+  void _submitRegistration(SessionController ctrl) {
+    final first = _firstNameCtrl.text.trim();
+    if (first.isEmpty) return;
+    _run(() => ctrl.submitRegistration(
+          firstName: first,
+          lastName: _lastNameCtrl.text.trim(),
+        ));
+  }
+
+  List<Widget> _passwordStep(SessionController ctrl) {
+    return [
+      TextField(
+        controller: _pwCtrl,
+        obscureText: !_pwVisible,
+        // TextInputType.text, а НЕ visiblePassword: на Samsung Keyboard
+        // visiblePassword показывает цифровой пад, и буквы в пароль 2FA
+        // ввести нельзя. text даёт полную QWERTY; скрытие — через obscureText.
+        keyboardType: TextInputType.text,
+        enableSuggestions: false,
+        autocorrect: false,
+        autofocus: true,
+        decoration: InputDecoration(
+          labelText: 'Пароль',
+          prefixIcon: const Icon(Icons.lock_outline),
+          suffixIcon: IconButton(
+            tooltip: _pwVisible ? 'Скрыть' : 'Показать',
+            icon: Icon(
+              _pwVisible
+                  ? Icons.visibility_off_outlined
+                  : Icons.visibility_outlined,
+            ),
+            onPressed: () => setState(() => _pwVisible = !_pwVisible),
+          ),
+        ),
+        onSubmitted:
+            _busy ? null : (_) => _run(() => ctrl.submit2fa(_pwCtrl.text)),
+      ),
+      const SizedBox(height: 20),
+      _PrimaryButton(
+        label: 'Войти',
+        busy: _busy,
+        onPressed: () => _run(() => ctrl.submit2fa(_pwCtrl.text)),
+      ),
+    ];
+  }
+
+  List<Widget> _tokenStep(SessionController ctrl) {
+    return [
       TextField(
         controller: _tokenCtrl,
         minLines: 3,
@@ -116,24 +325,54 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         enableSuggestions: false,
         decoration: const InputDecoration(
           labelText: 'auth-token',
-          hintText: 'Вставьте токен сюда...',
+          hintText: 'Вставьте токен сюда…',
           alignLabelWithHint: true,
         ),
       ),
-      const SizedBox(height: 16),
-      FilledButton(
-        onPressed: _busy
-            ? null
-            : () => _run(() => ctrl.loginWithToken(_tokenCtrl.text)),
-        child: _busy
-            ? const SizedBox(
-                width: 20, height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Text('Войти по токену'),
+      const SizedBox(height: 20),
+      _PrimaryButton(
+        label: 'Войти по токену',
+        busy: _busy,
+        onPressed: () => _run(() => ctrl.loginWithToken(_tokenCtrl.text)),
       ),
     ];
   }
+
+  // ─────────────────────────── подвал ───────────────────────────
+
+  Widget _footer(_Step step, SessionController ctrl) {
+    // На шаге имени назад нельзя: verify-код уже потрачен, возврат означал бы
+    // новый запрос кода и лишний расход попыток.
+    if (step == _Step.code || step == _Step.password) {
+      return TextButton.icon(
+        onPressed: _busy
+            ? null
+            : () {
+                _codeCtrl.clear();
+                _pwCtrl.clear();
+                ctrl.backToPhone();
+              },
+        icon: const Icon(Icons.arrow_back, size: 18),
+        label: const Text('Изменить номер'),
+      );
+    }
+    if (step == _Step.name) {
+      return Text(
+        'Имя увидят собеседники в MAX. Его можно изменить позже '
+        'в настройках профиля.',
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.bodySmall,
+      );
+    }
+    return TextButton(
+      onPressed: _busy ? null : () => setState(() => _tokenMode = !_tokenMode),
+      child: Text(
+        _tokenMode ? 'Войти по номеру телефона' : 'У меня есть auth-token',
+      ),
+    );
+  }
+
+  // ─────────────────────────── таймер повтора ───────────────────
 
   /// Сколько секунд осталось до повторного запроса кода. 0 — можно сейчас.
   int _resendCountdown(SessionState session) {
@@ -160,152 +399,72 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _resendTicker = null;
     }
   }
+}
 
-  // ─────────────── вход по SMS ───────────────
-  List<Widget> _smsForm(SessionState session, SessionController ctrl) {
-    if (session.authFlow == AuthState.awaitingSms) {
-      _ensureResendTicker(session);
-      final countdown = _resendCountdown(session);
-      final len = session.codeLength;
-      final attempts = session.attemptsLeft;
-      return [
-        Text('Введите код, отправленный на ${session.phone ?? ''}'),
-        const SizedBox(height: 4),
-        Text(
-          // Сервер не сообщает канал доставки, поэтому называем оба:
-          // при установленном официальном MAX код обычно приходит в него,
-          // а не отдельной SMS.
-          'Код приходит в SMS или в официальное приложение MAX, '
-          'если вы вошли в него на этом телефоне.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _codeCtrl,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          maxLength: len,
-          decoration: InputDecoration(
-            labelText: len == null ? 'Код' : 'Код из $len цифр',
-            counterText: '',
-          ),
-          onSubmitted: _busy
-              ? null
-              : (_) => _run(() => ctrl.submitSmsCode(_codeCtrl.text.trim())),
-        ),
-        const SizedBox(height: 16),
-        FilledButton(
-          onPressed: _busy
-              ? null
-              : () => _run(() => ctrl.submitSmsCode(_codeCtrl.text.trim())),
-          child: _busy
-              ? const CircularProgressIndicator()
-              : const Text('Подтвердить'),
-        ),
-        const SizedBox(height: 8),
-        TextButton(
-          onPressed: (_busy || countdown > 0)
-              ? null
-              : () {
-                  _codeCtrl.clear();
-                  _run(() => ctrl.resendSms());
-                },
-          child: Text(
-            countdown > 0
-                ? 'Запросить код заново можно через $countdown с'
-                : 'Запросить код заново',
-          ),
-        ),
-        if (attempts != null)
-          Text(
-            'Осталось запросов кода: $attempts',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-      ];
-    }
+enum _Step { phone, code, name, password, token }
 
-    if (session.authFlow == AuthState.awaiting2fa) {
-      return [
-        const Text(
-          'Введите пароль 2FA от вашего аккаунта MAX. '
-          'Можно использовать любые символы (буквы, цифры).',
+class _PrimaryButton extends StatelessWidget {
+  const _PrimaryButton({
+    required this.label,
+    required this.busy,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool busy;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      child: FilledButton(
+        onPressed: busy ? null : onPressed,
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _pwCtrl,
-          obscureText: !_pwVisible,
-          // TextInputType.text, а НЕ visiblePassword: на Samsung Keyboard
-          // visiblePassword показывает цифровой пад, и буквы в пароль 2FA
-          // ввести нельзя. text даёт полную QWERTY; скрытие — через obscureText.
-          keyboardType: TextInputType.text,
-          enableSuggestions: false,
-          autocorrect: false,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: 'Пароль 2FA',
-            suffixIcon: IconButton(
-              tooltip: _pwVisible ? 'Скрыть' : 'Показать',
-              icon: Icon(
-                _pwVisible
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
-              ),
-              onPressed: () => setState(() => _pwVisible = !_pwVisible),
+        child: busy
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.4),
+              )
+            : Text(label),
+      ),
+    );
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: scheme.errorContainer,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline, color: scheme.onErrorContainer, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(color: scheme.onErrorContainer),
             ),
           ),
-          onSubmitted: _busy
-              ? null
-              : (_) => _run(() => ctrl.submit2fa(_pwCtrl.text)),
-        ),
-        const SizedBox(height: 16),
-        FilledButton(
-          onPressed: _busy
-              ? null
-              : () => _run(() => ctrl.submit2fa(_pwCtrl.text)),
-          child: _busy
-              ? const CircularProgressIndicator()
-              : const Text('Войти'),
-        ),
-      ];
-    }
-
-    // unauthenticated — ввод телефона
-    return [
-      Text(
-        'Введи номер телефона в международном формате,\n'
-        'например +79991234567',
-        style: Theme.of(context).textTheme.bodyMedium,
+        ],
       ),
-      const SizedBox(height: 16),
-      TextField(
-        controller: _phoneCtrl,
-        keyboardType: TextInputType.phone,
-        decoration: const InputDecoration(
-          labelText: 'Телефон',
-          hintText: '+79991234567',
-        ),
-      ),
-      const SizedBox(height: 16),
-      FilledButton(
-        onPressed: _busy
-            ? null
-            : () => _run(() => ctrl.requestSms(_phoneCtrl.text.trim())),
-        child: _busy
-            ? const CircularProgressIndicator()
-            : const Text('Получить код'),
-      ),
-      const SizedBox(height: 12),
-      // Регистрация нового аккаунта протоколом этого клиента не
-      // реализована: реверснут только вход (START_AUTH → LOGIN-токен).
-      // Без этой оговорки «код не приходит» на незарегистрированный
-      // номер выглядит как поломка приложения.
-      Text(
-        'Max Vektor выполняет вход в существующий аккаунт MAX. '
-        'Если номер ещё не зарегистрирован в MAX, сначала создайте '
-        'аккаунт в официальном приложении — регистрация здесь не '
-        'поддерживается.',
-        style: Theme.of(context).textTheme.bodySmall,
-      ),
-    ];
+    );
   }
 }

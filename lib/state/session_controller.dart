@@ -125,7 +125,8 @@ class SessionController extends Notifier<SessionState> {
         await _syncAccountCard(phone: state.phone);
         state = SessionState(status: SessionStatus.signedIn);
       } else {
-        state = state.copyWith(authFlow: AuthState.awaiting2fa);
+        // awaiting2fa или awaitingName — экран входа покажет нужный шаг.
+        state = state.copyWith(authFlow: next);
       }
     } catch (e) {
       // Если verify-token использован/истёк — сбросим состояние SMS,
@@ -133,6 +134,12 @@ class SessionController extends Notifier<SessionState> {
       repo.resetSmsState();
       state = state.copyWith(error: _humanError(e));
     }
+  }
+
+  /// Вернуться к вводу номера: пользователь ошибся или хочет другой номер.
+  void backToPhone() {
+    ref.read(authRepositoryProvider).resetSmsState();
+    state = const SessionState(status: SessionStatus.signedOut);
   }
 
   /// Повторно отправить SMS-код на тот же номер. Используется после
@@ -155,6 +162,23 @@ class SessionController extends Notifier<SessionState> {
     state = state.copyWith(error: null);
     try {
       await repo.submit2fa(password);
+      await _syncAccountCard(phone: state.phone);
+      state = const SessionState(status: SessionStatus.signedIn);
+    } catch (e) {
+      state = state.copyWith(error: _humanError(e));
+    }
+  }
+
+  /// Завершить регистрацию нового аккаунта: сервер принял код, но номера
+  /// в MAX ещё нет и он ждёт имя.
+  Future<void> submitRegistration({
+    required String firstName,
+    String? lastName,
+  }) async {
+    final repo = ref.read(authRepositoryProvider);
+    state = state.copyWith(error: null);
+    try {
+      await repo.submitRegistration(firstName: firstName, lastName: lastName);
       await _syncAccountCard(phone: state.phone);
       state = const SessionState(status: SessionStatus.signedIn);
     } catch (e) {

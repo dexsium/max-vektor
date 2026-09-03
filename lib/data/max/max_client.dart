@@ -380,6 +380,9 @@ class MaxClient {
     final f = await _request(MaxOp.authRequest, {
       'phone': phone,
       'type': 'START_AUTH',
+      // Официальный клиент шлёт ещё language (и captchaToken, когда сервер
+      // требует капчу — её мы не проходим и не обходим).
+      'language': MaxProto.locale,
     });
     if (f.cmd != 1) _failWith(f, 'AUTH_REQUEST');
     final t = RawParsers.findLongToken(f.body);
@@ -406,8 +409,15 @@ class MaxClient {
     return challenge;
   }
 
-  /// Возвращает (authToken, trackIdFor2fa). Один из двух непустой.
-  Future<({String? authToken, String? trackId})> confirmSms(
+  /// Возвращает результат проверки кода: вход, 2FA или регистрация.
+  ///
+  /// Три исхода (порядок разбора — как в официальном веб-клиенте):
+  /// * `authToken` — аккаунт существует, вход выполнен;
+  /// * `trackId` — включён пароль 2FA;
+  /// * `registerToken` — аккаунта НЕТ, сервер прислал
+  ///   `tokenAttrs.REGISTER.token`, дальше нужен op 23 с именем.
+  Future<({String? authToken, String? trackId, String? registerToken})>
+      confirmSms(
     String verifyToken,
     String code,
   ) async {
@@ -427,17 +437,71 @@ class MaxClient {
       _failWith(f, 'AUTH_CONFIRM');
     }
 
+    // Номер ещё не зарегистрирован: сервер отдаёт токен регистрации в
+    // tokenAttrs.REGISTER.token, профиля при этом нет.
+    final registerToken = _registerToken(f.decoded);
+    if (registerToken != null) {
+      _log.i('${MvTag.auth} номер не зарегистрирован — требуется имя');
+      return (authToken: null, trackId: null, registerToken: registerToken);
+    }
+
     final authToken = RawParsers.findLongToken(f.body);
-    if (authToken != null) return (authToken: authToken, trackId: null);
+    if (authToken != null) {
+      return (authToken: authToken, trackId: null, registerToken: null);
+    }
 
     if (_contains(f.body, 'passwordChallenge')) {
       final tid = RawParsers.findUuid(f.body);
       if (tid == null) {
         throw const MaxLoginFailed('2FA required but trackId not found');
       }
-      return (authToken: null, trackId: tid);
+      return (authToken: null, trackId: tid, registerToken: null);
     }
     throw const MaxLoginFailed('no auth token and no 2FA challenge');
+  }
+
+  /// `tokenAttrs.REGISTER.token` из ответа на op 18, если он там есть.
+  static String? _registerToken(Object? decoded) {
+    if (decoded is! Map) return null;
+    final attrs = decoded['tokenAttrs'];
+    if (attrs is! Map) return null;
+    final reg = attrs['REGISTER'];
+    if (reg is! Map) return null;
+    final token = reg['token'];
+    return (token is String && token.isNotEmpty) ? token : null;
+  }
+
+  /// Завершение регистрации нового аккаунта (op 23).
+  ///
+  /// Вызывается с токеном из [confirmSms]. Сервер валидирует имя и в ответ
+  /// присылает профиль вместе с auth-токеном.
+  ///
+  /// Структура запроса взята из модуля авторизации официального веб-клиента:
+  /// `{token, tokenType: 'REGISTER', firstName, lastName?, photoId?}`.
+  /// Аватар (`photoId`) не отправляем — его можно поставить после входа.
+  Future<String> completeRegistration({
+    required String token,
+    required String firstName,
+    String? lastName,
+  }) async {
+    final trimmedLast = lastName?.trim();
+    _log.i('${MvTag.auth} регистрация: отправляем имя');
+    final f = await _request(MaxOp.register, {
+      'token': token,
+      'tokenType': 'REGISTER',
+      'firstName': firstName.trim(),
+      if (trimmedLast != null && trimmedLast.isNotEmpty)
+        'lastName': trimmedLast,
+    });
+    if (f.cmd != 1) _failWith(f, 'REGISTER');
+    final authToken = RawParsers.findLongToken(f.body);
+    if (authToken == null) {
+      throw const MaxLoginFailed(
+        'Регистрация прошла, но сервер не вернул токен сессии',
+      );
+    }
+    _log.i('${MvTag.auth} регистрация завершена');
+    return authToken;
   }
 
   Future<String> confirm2fa(String trackId, String password) async {
