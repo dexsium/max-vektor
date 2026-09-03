@@ -718,14 +718,17 @@ class MaxClient {
   List<dynamic>? get lastSyncedChats => _lastSyncedChats;
 
   Future<Uint8List> login(String token) async {
+    // Структура payload сверена с официальным APK 26.30 (pj9.java, wkc.LOGIN):
+    // token + interactive + presenceSync=-1 (ВСЕГДА) + вложенный exp{}.
+    // Старый форк слал chatsCount и presenceSync=0 — в новом протоколе это
+    // приводит к `proto.payload` (сервер отвергает LOGIN). Поля *Sync и
+    // configHash официальный клиент добавляет ТОЛЬКО когда они > 0 / непусты;
+    // при первом входе их нет, поэтому не отправляем.
     final f = await _request(MaxOp.login, {
       'token': token,
       'interactive': false,
-      'chatsCount': 40,
-      'chatsSync': 0,
-      'contactsSync': 0,
-      'presenceSync': 0,
-      'draftsSync': 0,
+      'presenceSync': -1,
+      'exp': <String, Object?>{},
     });
     if (f.cmd != 1) {
       final r = _rejection(f);
