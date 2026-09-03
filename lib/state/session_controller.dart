@@ -21,6 +21,10 @@ class SessionState {
   /// Сколько запросов кода ещё разрешено.
   final int? attemptsLeft;
 
+  /// Токен регистрации: живёт между вводом кода и успешным вводом имени,
+  /// переживая неудачные попытки.
+  final String? registerToken;
+
   const SessionState({
     required this.status,
     this.authFlow = AuthState.unauthenticated,
@@ -29,6 +33,7 @@ class SessionState {
     this.codeLength,
     this.resendAvailableAt,
     this.attemptsLeft,
+    this.registerToken,
   });
 
   SessionState copyWith({
@@ -39,6 +44,7 @@ class SessionState {
     int? codeLength,
     DateTime? resendAvailableAt,
     int? attemptsLeft,
+    String? registerToken,
   }) {
     return SessionState(
       status: status ?? this.status,
@@ -48,6 +54,7 @@ class SessionState {
       codeLength: codeLength ?? this.codeLength,
       resendAvailableAt: resendAvailableAt ?? this.resendAvailableAt,
       attemptsLeft: attemptsLeft ?? this.attemptsLeft,
+      registerToken: registerToken ?? this.registerToken,
     );
   }
 }
@@ -126,7 +133,10 @@ class SessionController extends Notifier<SessionState> {
         state = SessionState(status: SessionStatus.signedIn);
       } else {
         // awaiting2fa или awaitingName — экран входа покажет нужный шаг.
-        state = state.copyWith(authFlow: next);
+        state = state.copyWith(
+          authFlow: next,
+          registerToken: repo.registerToken,
+        );
       }
     } catch (e) {
       // Если verify-token использован/истёк — сбросим состояние SMS,
@@ -178,7 +188,13 @@ class SessionController extends Notifier<SessionState> {
     final repo = ref.read(authRepositoryProvider);
     state = state.copyWith(error: null);
     try {
-      await repo.submitRegistration(firstName: firstName, lastName: lastName);
+      await repo.submitRegistration(
+        firstName: firstName,
+        lastName: lastName,
+        // Токен берём из состояния: репозиторий мог быть пересоздан после
+        // обрыва соединения, и своё поле у него уже пустое.
+        token: state.registerToken,
+      );
       await _syncAccountCard(phone: state.phone);
       state = const SessionState(status: SessionStatus.signedIn);
     } catch (e) {

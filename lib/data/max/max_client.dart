@@ -570,7 +570,10 @@ class MaxClient {
         'error=${r.code ?? '-'} message=${r.message ?? '-'}',
       );
       final hint = _registerValidationHint(r.code);
-      if (hint != null) throw MaxLoginFailed(hint);
+      // Код показываем всегда: серверный localizedMessage сводится к
+      // «ошибка валидации» и не даёт понять, что именно исправлять.
+      if (hint != null) throw MaxLoginFailed('$hint
+[${r.code}]');
       _failWith(f, 'REGISTER');
     }
     final authToken = RawParsers.findLongToken(f.body);

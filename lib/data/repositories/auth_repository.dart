@@ -51,7 +51,12 @@ class AuthRepository {
 
   /// Токен регистрации (`tokenAttrs.REGISTER.token`) — живёт между вводом
   /// кода и вводом имени.
-  String? _registerToken;
+  ///
+  /// Публичный: контроллер сессии кладёт его в своё состояние и передаёт
+  /// обратно при отправке имени. Если держать токен только здесь, он
+  /// теряется при любом пересоздании репозитория — и вторая попытка ввода
+  /// имени падает с «Регистрация не начата» вместо настоящей ошибки.
+  String? registerToken;
 
   /// Имя из профиля MAX, если его удалось загрузить при последнем входе.
   /// Нужно переключателю аккаунтов, чтобы подписать карточку без лишнего
@@ -195,7 +200,7 @@ class AuthRepository {
       return AuthState.authenticated;
     }
     if (r.registerToken != null) {
-      _registerToken = r.registerToken;
+      registerToken = r.registerToken;
       return AuthState.awaitingName;
     }
     _log.i('${MvTag.auth} требуется 2FA-пароль');
@@ -207,17 +212,24 @@ class AuthRepository {
   Future<void> submitRegistration({
     required String firstName,
     String? lastName,
+    String? token,
   }) async {
-    final token = _registerToken;
-    if (token == null) throw StateError('Регистрация не начата');
+    final regToken = token ?? registerToken;
+    if (regToken == null) {
+      throw const MaxLoginFailed(
+        'Сессия регистрации потеряна. Запросите код заново.',
+      );
+    }
     final authToken = await _withFreshConnection(
       () => client.completeRegistration(
-        token: token,
+        token: regToken,
         firstName: firstName,
         lastName: lastName,
       ),
     );
-    _registerToken = null;
+    // Сбрасываем только после успеха: при отказе сервера (например, имя не
+    // прошло проверку) токен ещё нужен для повторной попытки.
+    registerToken = null;
     await _completeLogin(authToken);
   }
 
