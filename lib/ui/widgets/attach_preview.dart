@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/max/models/attach.dart';
+import '../screens/video_player_screen.dart';
+import 'app_snack.dart';
 import '../../state/chats_controller.dart';
 
 /// Превью одного MaxAttach внутри пузыря сообщения. Поддерживает PHOTO,
@@ -181,10 +183,21 @@ class _AttachPreviewState extends ConsumerState<AttachPreview> {
 
   Widget _buildVideo(BuildContext context, ColorScheme scheme) {
     return InkWell(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Видео: TODO плеер')),
-        );
+      onTap: () async {
+        // Прямая ссылка на поток лежит в downloadUrl (videoUrl из attach).
+        // Если сервер её не дал — пробуем скачать файл и открыть локально.
+        final url = attach.downloadUrl ?? attach.localPath;
+        if (url == null || url.isEmpty) {
+          if (context.mounted) {
+            AppSnack.show(context, 'Ссылка на видео недоступна');
+          }
+          return;
+        }
+        if (context.mounted) {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => VideoPlayerScreen(url: url),
+          ));
+        }
       },
       child: Stack(
         alignment: Alignment.center,

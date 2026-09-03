@@ -227,8 +227,17 @@ class MaxAttach extends Equatable {
     final isImage =
         type == MaxAttachType.photo || type == MaxAttachType.sticker;
 
+    // Видео несёт готовую ссылку на поток прямо в attach: videoUrl (иногда
+    // embedUrl). Имена сверены с парсером официального APK (r40.java).
+    final videoUrl =
+        m['videoUrl']?.toString() ?? m['embedUrl']?.toString();
+
     String? displayUrl;
-    if (photoUrl != null && photoUrl.isNotEmpty) {
+    if ((type == MaxAttachType.video || type == MaxAttachType.videoMsg) &&
+        videoUrl != null &&
+        videoUrl.isNotEmpty) {
+      displayUrl = videoUrl;
+    } else if (photoUrl != null && photoUrl.isNotEmpty) {
       displayUrl = photoUrl;
     } else if (baseUrl != null && baseUrl.isNotEmpty) {
       displayUrl = withSizeDescriptor(

@@ -6,6 +6,7 @@ import '../../data/max/models/message.dart';
 import '../../state/chats_controller.dart';
 import '../widgets/chat_input.dart';
 import '../widgets/date_divider.dart';
+import '../widgets/app_snack.dart';
 import '../widgets/message_bubble.dart';
 import 'forward_picker_screen.dart';
 import 'media_gallery_screen.dart';
@@ -292,9 +293,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         actions: [
           IconButton(
             tooltip: 'Видеозвонок',
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Видеозвонок: в разработке')),
-            ),
+            onPressed: () => AppSnack.soon(context),
             icon: const Icon(Icons.videocam_outlined),
           ),
           IconButton(

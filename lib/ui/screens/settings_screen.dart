@@ -8,6 +8,7 @@ import '../../state/theme_controller.dart';
 import 'accounts_screen.dart';
 import 'devices_screen.dart';
 import 'qr_login_scanner_screen.dart';
+import '../widgets/app_snack.dart';
 
 /// Экран настроек.
 ///
@@ -168,11 +169,7 @@ class SettingsScreen extends ConsumerWidget {
   void _push(BuildContext context, Widget screen) =>
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
 
-  void _soon(BuildContext context) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('Раздел в разработке')));
-  }
+  void _soon(BuildContext context) => AppSnack.soon(context);
 
   Future<void> _pickTheme(BuildContext context, WidgetRef ref) async {
     final ctrl = ref.read(themeModeProvider.notifier);
