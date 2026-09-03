@@ -701,21 +701,6 @@ class MaxClient {
     return t;
   }
 
-  /// Пометить сессию как вошедшую БЕЗ повторного LOGIN (op 19).
-  ///
-  /// Интерактивная авторизация (код op 18, 2FA op 115, регистрация op 23)
-  /// уже переводит сессию в ONLINE на сервере и возвращает постоянный токен.
-  /// Слать после этого op 19 нельзя — сервер отвечает `proto.payload`.
-  /// op 19 нужен только при перезапуске: вход по сохранённому токену.
-  void markLoggedIn(String token) {
-    _token = token;
-    _sinceLogin
-      ..reset()
-      ..start();
-    _startKeepalive();
-    _reconnect.rearm();
-    _log.i('${MvTag.auth} сессия ONLINE (без повторного LOGIN)');
-  }
 
   /// Логин по сохранённому токену. Возвращает raw payload, оттуда вызывающий
   /// код может вытащить контакты/чаты при синхронизации.
@@ -748,19 +733,27 @@ class MaxClient {
         '${MvTag.auth} LOGIN отклонён: cmd=${f.cmd} error=${r.code ?? '-'} '
         'message=${r.message ?? '-'}',
       );
-      // Токен мёртв ТОЛЬКО при явных «token»-кодах — тогда разлогин.
-      // Всё остальное (proto.payload, временные сбои) транзиентно: бросаем
-      // обычную ошибку, чтобы reconnect повторил, а не выкидывал из аккаунта.
       final code = r.code ?? '';
-      final tokenDead = code.contains('login.token') ||
-          code.contains('login.cred') ||
-          code.contains('FAIL_LOGIN_TOKEN') ||
-          code == 'token.invalid' ||
-          code == 'auth.token.invalid';
-      if (tokenDead) {
-        throw MaxTokenRejected(r.localized ?? 'Сессия истекла: $code');
+      // Сессия УЖЕ онлайн: интерактивный вход (op 18/115) сам её поднял, и
+      // повторный LOGIN на той же сессии сервер отвечает proto.state. Это не
+      // ошибка — токен валиден, соединение живо. Проваливаемся в успешную
+      // ветку ниже, чтобы включить keepalive и снять отмену reconnect.
+      final alreadyOnline = code == 'proto.state' || code.contains('ONLINE');
+      if (!alreadyOnline) {
+        // Токен мёртв ТОЛЬКО при явных «token»-кодах — тогда разлогин.
+        // Всё остальное (временные сбои) транзиентно: бросаем обычную ошибку,
+        // чтобы reconnect повторил, а не выкидывал из аккаунта.
+        final tokenDead = code.contains('login.token') ||
+            code.contains('login.cred') ||
+            code.contains('FAIL_LOGIN_TOKEN') ||
+            code == 'token.invalid' ||
+            code == 'auth.token.invalid';
+        if (tokenDead) {
+          throw MaxTokenRejected(r.localized ?? 'Сессия истекла: $code');
+        }
+        throw MaxError('LOGIN cmd=${f.cmd} ${r.code ?? ''}'.trim());
       }
-      throw MaxError('LOGIN cmd=${f.cmd} ${r.code ?? ''}'.trim());
+      _log.i('${MvTag.auth} LOGIN: сессия уже онлайн — принимаю как успех');
     }
     _token = token;
     _sinceLogin
