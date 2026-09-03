@@ -15,13 +15,18 @@ Future<void> main(List<String> argv) async {
       printer: SimplePrinter(),
     ),
   );
-  try {
-    await client.connect();
-    final link = await client.captchaSessionLink(phone);
-    stdout.writeln(link == null
-        ? 'КАПЧА НЕ ТРЕБУЕТСЯ: сервер не вернул ссылку'
-        : 'КАПЧА ТРЕБУЕТСЯ: $link');
-  } finally {
-    await client.close();
+  // Пробуем оба пути: капча может создаваться только для WEB.
+  for (final deviceType in ['WEB', 'ANDROID']) {
+    try {
+      await client.connect(deviceType: deviceType);
+      final link = await client.captchaSessionLink(phone);
+      stdout.writeln(link == null
+          ? '$deviceType → ссылки на капчу нет'
+          : '$deviceType → КАПЧА: $link');
+    } catch (e) {
+      stdout.writeln('$deviceType → ошибка: $e');
+    } finally {
+      await client.close();
+    }
   }
 }

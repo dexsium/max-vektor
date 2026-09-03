@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:logger/logger.dart';
 
@@ -28,6 +29,22 @@ class AuthRepository {
   final MaxClient client;
   final SecureStorage storage;
   final Logger _log;
+
+  /// Каким устройством представляться при входе по номеру.
+  ///
+  /// ВАЖНО: на ANDROID сервер код не отправляет. Он отвечает на запрос
+  /// успехом (cmd=1, token, codeLength), но SMS/push не приходит, а
+  /// создание капчи для этого пути выключено
+  /// (`captcha.create-session-failed / Captcha creation disabled`) —
+  /// то есть пройти проверку и «доказать», что клиент настоящий, нечем.
+  /// На IOS капчи нет и код приходит сразу; проверено вживую.
+  /// WEB тоже рабочий, но требует прохождения капчи в браузере.
+  static String get _authDeviceType => Platform.isIOS ? 'IOS' : 'ANDROID';
+
+  /// Значение для secure storage, по которому при восстановлении сессии
+  /// поднимается соединение того же типа: токен, выданный IOS-сессии,
+  /// сервер не примет от ANDROID.
+  static String get _authTokenKind => Platform.isIOS ? 'ios' : 'android';
 
   String? _verifyToken;
   String? _trackId;
@@ -62,7 +79,11 @@ class AuthRepository {
       return false;
     }
     final kind = await storage.readTokenKind() ?? 'android';
-    final deviceType = kind == 'web' ? 'WEB' : 'ANDROID';
+    final deviceType = switch (kind) {
+      'web' => 'WEB',
+      'ios' => 'IOS',
+      _ => 'ANDROID',
+    };
     try {
       if (!client.isConnected) await client.connect(deviceType: deviceType);
       await client.login(saved);
@@ -97,15 +118,15 @@ class AuthRepository {
 
   Future<MaxSmsChallenge> requestSms(String phone) async {
     _log.i('${MvTag.auth} запрос SMS-кода для номера ***${_tail(phone)}');
-    // SMS-флоу — всегда ANDROID. Если до этого было WEB-соединение
-    // (вход по токену), закрываем его и поднимаем чистое ANDROID, иначе
-    // _deviceType остался бы WEB и сервер обработал бы запрос иначе.
+    // Если до этого было WEB-соединение (вход по токену), закрываем его и
+    // поднимаем чистое соединение нужного типа: иначе _deviceType остался
+    // бы WEB и сервер обработал бы запрос иначе.
     if (client.isConnected) {
       await client.close();
     }
     final challenge = await _withFreshConnection(
       () => client.startAuthSms(phone),
-      deviceType: 'ANDROID',
+      deviceType: _authDeviceType,
     );
     _verifyToken = challenge.token;
     lastChallenge = challenge;
@@ -158,12 +179,12 @@ class AuthRepository {
     if (vt == null) throw StateError('SMS не запрошен');
     if (!client.isConnected) {
       try {
-        await client.connect(deviceType: 'ANDROID');
+        await client.connect(deviceType: _authDeviceType);
       } catch (e) {
         // Если коннект упал ДО отправки confirmSms — verify-token не использован,
         // можно попробовать ещё раз через 500мс.
         await Future<void>.delayed(const Duration(milliseconds: 500));
-        await client.connect(deviceType: 'ANDROID');
+        await client.connect(deviceType: _authDeviceType);
       }
     }
     _log.i('${MvTag.auth} отправка SMS-кода на проверку');
@@ -231,7 +252,7 @@ class AuthRepository {
   Future<void> _completeLogin(String token) async {
     _log.i('${MvTag.auth} вход завершён, токен ${mvRedact(token)} сохранён');
     await storage.writeToken(token);
-    await storage.writeTokenKind('android');
+    await storage.writeTokenKind(_authTokenKind);
     await client.login(token);
     await _captureProfile();
   }

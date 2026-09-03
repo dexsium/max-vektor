@@ -39,14 +39,6 @@ Future<void> main(List<String> argv) async {
     await client.connect();
     _say('INIT: ok — handshake сервер принял');
     try {
-      // Сравниваем оба типа запроса: официальный веб при выключенной
-      // капче шлёт RESEND, апстрим-форк слал START_AUTH.
-      for (final type in ['RESEND', 'START_AUTH']) {
-        final c = await client.startAuthSms(phone, type: type);
-        _say('type=$type → код из ${c.codeLength} цифр, '
-            'повтор через ${c.resendAfterMs}мс, '
-            'попыток осталось ${c.attemptsLeft}');
-      }
       final c = await client.startAuthSms(phone);
       _say('AUTH_REQUEST: принят. Код из ${c.codeLength} цифр, '
           'повтор через ${c.resendAfterMs}мс, '
