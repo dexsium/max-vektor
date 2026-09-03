@@ -556,12 +556,19 @@ class MaxClient {
   }) async {
     final trimmedLast = lastName?.trim();
     _log.i('${MvTag.auth} регистрация: отправляем имя');
+    // Набор и порядок ключей — как в официальном клиенте:
+    // {token, tokenType, firstName, lastName, photoId}. Ключи lastName и
+    // photoId присутствуют ВСЕГДА, даже пустыми: раньше мы их опускали, и
+    // сервер отвечал отказом валидации на имя, которое официальное
+    // приложение принимает.
     final f = await _request(MaxOp.register, {
       'token': token,
       'tokenType': 'REGISTER',
       'firstName': firstName.trim(),
-      if (trimmedLast != null && trimmedLast.isNotEmpty)
-        'lastName': trimmedLast,
+      'lastName': (trimmedLast == null || trimmedLast.isEmpty)
+          ? null
+          : trimmedLast,
+      'photoId': null,
     });
     if (f.cmd != 1) {
       final r = _rejection(f);
