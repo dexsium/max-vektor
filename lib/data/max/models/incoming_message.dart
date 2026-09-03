@@ -18,6 +18,9 @@ class IncomingMessage extends Equatable {
   /// `_type` и набором полей зависящих от типа. Парсится в `MaxAttach.fromServer`.
   final List<Map<String, dynamic>> attaches;
 
+  /// Имя источника пересланного сообщения (link.type=FORWARD). null = не форвард.
+  final String? forwardFromName;
+
   const IncomingMessage({
     required this.chatId,
     required this.text,
@@ -27,9 +30,10 @@ class IncomingMessage extends Equatable {
     this.timeMs,
     this.attaches = const [],
     this.cid,
+    this.forwardFromName,
   });
 
   @override
   List<Object?> get props =>
-      [chatId, messageId, sender, text, timeMs, attaches, cid];
+      [chatId, messageId, sender, text, timeMs, attaches, cid, forwardFromName];
 }

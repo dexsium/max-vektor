@@ -171,6 +171,7 @@ class MessagesRepository {
         text: text,
         timeMs: time,
         direction: dir,
+        forwardFromName: MaxClient.forwardFromLink(m['link']),
       );
       await db.insertMessage(msg);
       if (hasAttaches && id != null) {
@@ -946,6 +947,7 @@ class MessagesRepository {
       text: m.text,
       timeMs: m.timeMs ?? DateTime.now().millisecondsSinceEpoch,
       direction: dir,
+      forwardFromName: m.forwardFromName,
     );
     await db.insertMessage(msg);
     if (m.attaches.isNotEmpty && m.messageId != null) {

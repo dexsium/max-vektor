@@ -32,7 +32,7 @@ class AppDatabase {
     final path = p.join(dir.path, AppMeta.dbNameFor(accountId));
     final db = await openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -108,6 +108,10 @@ class AppDatabase {
       // булева is_group не хватало, чтобы отличить канал от группы.
       await db.execute('ALTER TABLE chats ADD COLUMN chat_kind TEXT');
       await db.execute('ALTER TABLE chats ADD COLUMN members_count INTEGER');
+    }
+    if (oldVersion < 9) {
+      // Имя источника пересланного сообщения (link.type=FORWARD, chatName).
+      await db.execute('ALTER TABLE messages ADD COLUMN forward_from TEXT');
     }
   }
 
@@ -187,7 +191,8 @@ class AppDatabase {
         reply_to_id INTEGER,
         reply_to_preview TEXT,
         edited_at INTEGER,
-        cid INTEGER
+        cid INTEGER,
+        forward_from TEXT
       )
     ''');
     await db.execute('''

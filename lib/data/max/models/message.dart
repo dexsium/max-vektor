@@ -32,6 +32,11 @@ class MaxMessage extends Equatable {
   /// Метка времени последней правки (opcode 67). null = сообщение не редактировалось.
   final int? editedAtMs;
 
+  /// Имя источника пересланного сообщения (канал/чат/автор). Не null, если это
+  /// форвард — тогда в пузыре рисуется «Переслано: <имя>». Берётся из объекта
+  /// `link` (type=FORWARD, поле chatName) серверного сообщения — см. APK pma.java.
+  final String? forwardFromName;
+
   const MaxMessage({
     required this.chatId,
     required this.text,
@@ -45,6 +50,7 @@ class MaxMessage extends Equatable {
     this.replyToPreview,
     this.attaches = const [],
     this.editedAtMs,
+    this.forwardFromName,
   });
 
   MaxMessage copyWith({
@@ -56,6 +62,7 @@ class MaxMessage extends Equatable {
     String? replyToPreview,
     List<MaxAttach>? attaches,
     int? editedAtMs,
+    String? forwardFromName,
   }) {
     return MaxMessage(
       id: id ?? this.id,
@@ -70,6 +77,7 @@ class MaxMessage extends Equatable {
       replyToPreview: replyToPreview ?? this.replyToPreview,
       attaches: attaches ?? this.attaches,
       editedAtMs: editedAtMs ?? this.editedAtMs,
+      forwardFromName: forwardFromName ?? this.forwardFromName,
     );
   }
 
@@ -87,6 +95,7 @@ class MaxMessage extends Equatable {
     'reply_to_id': replyToId,
     'reply_to_preview': replyToPreview,
     'edited_at': editedAtMs,
+    'forward_from': forwardFromName,
   };
 
   factory MaxMessage.fromDbRow(Map<String, Object?> r) => MaxMessage(
@@ -107,6 +116,7 @@ class MaxMessage extends Equatable {
     replyToId: r['reply_to_id'] as int?,
     replyToPreview: r['reply_to_preview'] as String?,
     editedAtMs: (r['edited_at'] as num?)?.toInt(),
+    forwardFromName: r['forward_from'] as String?,
   );
 
   @override
@@ -123,5 +133,6 @@ class MaxMessage extends Equatable {
     replyToPreview,
     attaches,
     editedAtMs,
+    forwardFromName,
   ];
 }

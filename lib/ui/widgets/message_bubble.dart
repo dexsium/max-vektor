@@ -84,6 +84,8 @@ class MessageBubble extends StatelessWidget {
               ),
               const SizedBox(height: 2),
             ],
+            if ((message.forwardFromName?.isNotEmpty ?? false))
+              _forwardBlock(scheme, fg),
             if (hasReply) _replyBlock(fg),
             if (message.attaches.isNotEmpty) _attachList(),
             if (message.text.isNotEmpty) ...[
@@ -162,6 +164,46 @@ class MessageBubble extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: items,
+    );
+  }
+
+  /// «Переслано: <имя источника>» — заголовок над пересланным содержимым,
+  /// как в официальном приложении.
+  Widget _forwardBlock(ColorScheme scheme, Color fg) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Переслано:',
+            style: TextStyle(
+              fontSize: 12,
+              color: fg.withValues(alpha: 0.6),
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.reply, size: 13, color: scheme.primary),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  message.forwardFromName!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

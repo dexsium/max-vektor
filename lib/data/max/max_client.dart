@@ -1365,6 +1365,7 @@ class MaxClient {
     int? timeMs;
     var attaches = const <Map<String, dynamic>>[];
     int? cid;
+    String? forwardName;
 
     final d = f.decoded;
     if (d is Map) {
@@ -1378,6 +1379,7 @@ class MaxClient {
         msgId = _toInt(mm['id']);
         timeMs = _toInt(mm['time']);
         cid = _toInt(mm['cid']);
+        forwardName = forwardFromLink(mm['link']);
         final at = mm['attaches'] ?? mm['attachments'];
         if (at is List) {
           attaches = at
@@ -1428,7 +1430,21 @@ class MaxClient {
       raw: f.body,
       attaches: attaches,
       cid: cid,
+      forwardFromName: forwardName,
     );
+  }
+
+  /// Имя источника пересланного сообщения из объекта `link` серверного
+  /// сообщения. Структура сверена с APK (pma.java): `link` = {type, chatId,
+  /// message, chatName, chatLink, chatIconUrl}. Для type=FORWARD показываем
+  /// имя источника — chatName (канал/чат). null, если это не форвард.
+  static String? forwardFromLink(Object? link) {
+    if (link is! Map) return null;
+    final lm = link.map((k, v) => MapEntry(k.toString(), v));
+    final type = lm['type']?.toString().toUpperCase();
+    if (type != 'FORWARD') return null;
+    final name = lm['chatName']?.toString().trim();
+    return (name != null && name.isNotEmpty) ? name : null;
   }
 
   Map<String, dynamic> _parseContact(MaxFrame f) {
