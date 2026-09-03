@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
+import '../../state/providers.dart';
 import '../../state/session_controller.dart';
 import '../widgets/accounts_section.dart';
 import 'devices_screen.dart';
@@ -15,15 +16,18 @@ class SettingsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Настройки')),
       body: ListView(
         children: [
-          const ListTile(
-            title: Text('О приложении'),
+          ListTile(
+            title: const Text('О приложении'),
+            // Версия и номер сборки берутся из бандла: номер подставляет CI,
+            // поэтому константа здесь врала бы.
             subtitle: Text(
-              '${AppMeta.name} ${AppMeta.version}\n'
+              '${AppMeta.name} '
+              '${ref.watch(appVersionLabelProvider).valueOrNull ?? AppMeta.version}\n'
               '${AppMeta.disclaimer} — неофициальный клиент MAX.\n'
               'Не связан с VK и разработчиками официального приложения MAX.',
             ),
             isThreeLine: true,
-            leading: Icon(Icons.info_outline),
+            leading: const Icon(Icons.info_outline),
           ),
           const ListTile(
             title: Text('Исходный код (upstream)'),

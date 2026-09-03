@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
+import '../core/constants.dart';
 import '../core/logging.dart';
 import '../data/account/account.dart';
 import '../data/account/account_runtime.dart';
@@ -157,3 +159,19 @@ final contactsRepositoryProvider = FutureProvider<ContactsRepository>(
 final mediaRepositoryProvider = FutureProvider<MediaRepository>(
   (ref) => ref.watch(accountRuntimeProvider).media(),
 );
+
+/// Строка версии для экрана «О приложении»: «0.1.17 (сборка 7)».
+///
+/// Берётся из бандла, а не из константы: номер сборки подставляет CI
+/// (`--build-number`), и захардкоженное значение врало бы. Если нативный
+/// канал недоступен (тесты, desktop без плагина) — падаем на [AppMeta.version].
+final appVersionLabelProvider = FutureProvider<String>((ref) async {
+  try {
+    final info = await PackageInfo.fromPlatform();
+    final version = info.version.isEmpty ? AppMeta.version : info.version;
+    final build = info.buildNumber;
+    return build.isEmpty ? version : '$version (сборка $build)';
+  } catch (_) {
+    return AppMeta.version;
+  }
+});

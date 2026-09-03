@@ -27,6 +27,9 @@ dependencies:
   flutter_riverpod: ^2.6.1
 
   # UI и утилиты
+  # Реальные version/build из бандла: CI подставляет номер сборки в
+  # CFBundleVersion, и «О приложении» должно показывать его, а не константу.
+  package_info_plus: ^8.1.2
   intl: ^0.20.1
   cached_network_image: ^3.4.1
   flutter_svg: ^2.0.16

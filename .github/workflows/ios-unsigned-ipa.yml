@@ -44,15 +44,24 @@ jobs:
       # Podfile читает ios/Flutter/Generated.xcconfig (там FLUTTER_ROOT).
       # Этот файл создаёт НЕ `pub get`, а конфигурационный шаг сборки —
       # без него `pod install` падает сразу.
+      # Номер сборки = номер запуска workflow: каждая сборка получает
+      # свой CFBundleVersion, и по нему видно, что именно стоит на телефоне.
+      # Это НАШ номер (Max Vektor). Версию официального клиента MAX, которой
+      # приложение представляется серверу, он не трогает — она живёт в
+      # MaxProto.appVersion/appBuild.
       - name: generate iOS config
-        run: flutter build ios --release --no-codesign --config-only
+        run: >-
+          flutter build ios --release --no-codesign --config-only
+          --build-number=${{ github.run_number }}
 
       - name: pod install
         working-directory: ios
         run: pod install --repo-update
 
       - name: build (no codesign)
-        run: flutter build ios --release --no-codesign
+        run: >-
+          flutter build ios --release --no-codesign
+          --build-number=${{ github.run_number }}
 
       - name: package Payload -> .ipa
         run: |
@@ -62,12 +71,13 @@ jobs:
           rm -rf build/ipa && mkdir -p build/ipa/Payload
           cp -R "$APP" build/ipa/Payload/
           cd build/ipa
-          zip -qry max-vektor-unsigned.ipa Payload
-          ls -lh max-vektor-unsigned.ipa
+          IPA="max-vektor-b${{ github.run_number }}-unsigned.ipa"
+          zip -qry "$IPA" Payload
+          ls -lh "$IPA"
 
       - uses: actions/upload-artifact@v4
         with:
           name: max-vektor-unsigned-ipa
-          path: build/ipa/max-vektor-unsigned.ipa
+          path: build/ipa/max-vektor-b${{ github.run_number }}-unsigned.ipa
           if-no-files-found: error
           retention-days: 30
