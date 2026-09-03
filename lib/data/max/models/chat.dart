@@ -238,11 +238,15 @@ MaxChat? parseServerChat(Map<Object?, Object?> raw) {
 
   return MaxChat(
     id: id.toInt(),
-    title: firstString(['title', 'name']),
+    // Имена полей сверены с парсером чата официального APK (lv2.java):
+    // title/name/subject — заголовок, baseIconUrl/icon/photoUrl — аватар.
+    title: firstString(['title', 'name', 'subject']),
     avatarUrl: firstString([
       'baseIconUrl',
       'baseRawIconUrl',
+      'icon',
       'iconUrl',
+      'photoUrl',
       'avatar',
       'photo',
     ]),

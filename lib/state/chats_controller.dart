@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/max/models/attach.dart';
+import '../data/repositories/chats_repository.dart';
 import '../data/max/models/chat.dart';
 import '../data/max/models/message.dart';
 import '../data/max/models/upload_input.dart';
@@ -35,7 +36,40 @@ class ChatsListController extends AsyncNotifier<List<MaxChat>> {
 
     final cached = client.lastSyncedChats;
     if (cached != null) await repo.ingestServerChats(cached);
-    return repo.listLocal();
+
+    final local = await repo.listLocal();
+    // Дозапрашиваем названия/аватары у чатов, застрявших на плейсхолдере
+    // «Чат N» (обычно заведены из push без CHAT_INFO). Делаем это в фоне,
+    // чтобы не задерживать первую отрисовку списка.
+    unawaited(_fillMissingTitles(repo, local));
+    return local;
+  }
+
+  /// Подтянуть CHAT_INFO (op 48) для чатов без нормального названия.
+  Future<void> _fillMissingTitles(
+    ChatsRepository repo,
+    List<MaxChat> chats,
+  ) async {
+    final ids = <int>[
+      for (final c in chats)
+        if (_needsInfo(c)) (c.serverChatId ?? c.id),
+    ];
+    if (ids.isEmpty) return;
+    try {
+      // Не больше 50 за раз — щадим сервер.
+      await repo.refresh(ids.take(50).toList());
+      await _reload();
+    } catch (_) {
+      // Оффлайн/ошибка — не критично, названия подтянутся позже.
+    }
+  }
+
+  static bool _needsInfo(MaxChat c) {
+    final t = c.title;
+    // Диалоги 1:1 имя берут из контакта (listLocal подставляет), поэтому их
+    // не трогаем; CHAT_INFO нужен группам/каналам без названия.
+    if (c.isDialog) return false;
+    return t == null || t.isEmpty || t == 'Чат ${c.id}';
   }
 
   Future<void> _reload() async {
