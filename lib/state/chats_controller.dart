@@ -66,9 +66,10 @@ class ChatsListController extends AsyncNotifier<List<MaxChat>> {
 
   static bool _needsInfo(MaxChat c) {
     final t = c.title;
-    // Диалоги 1:1 имя берут из контакта (listLocal подставляет), поэтому их
-    // не трогаем; CHAT_INFO нужен группам/каналам без названия.
-    if (c.isDialog) return false;
+    // Любой чат без нормального названия дозапрашиваем через CHAT_INFO —
+    // и группы/каналы, и диалоги (у диалога ответ несёт участника, из него
+    // берём имя и аватар). Раньше диалоги пропускались и застревали на
+    // «Чат N», если контакт не был известен.
     return t == null || t.isEmpty || t == 'Чат ${c.id}';
   }
 

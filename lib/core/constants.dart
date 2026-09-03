@@ -35,6 +35,9 @@ class MaxProto {
 /// Источник: реверс протокола в telega-to-max/max_client.py + декомпил APK
 /// (см. docs/MEDIA_OPCODES.md).
 class MaxOp {
+  /// PING (heartbeat). Официальный клиент шлёт его каждые 15 сек
+  /// (frk.java: heartbeat(15)); без него сервер рвёт сокет.
+  static const int ping = 1;
   static const int init = 6;
   static const int profile = 16;
   static const int authRequest = 17;

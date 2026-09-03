@@ -90,7 +90,8 @@ class MaxClient {
   /// read-only запрос, чтобы сервер не рвал сокет по простою и не провоцировал
   /// реконнект-шторм с переавторизацией (главный бан-фактор).
   Timer? _keepalive;
-  static const Duration _pingInterval = Duration(seconds: 25);
+  // Официальный клиент шлёт PING каждые 15 сек (frk.java: heartbeat(15)).
+  static const Duration _pingInterval = Duration(seconds: 15);
 
   String get deviceId => _deviceId ?? '(unresolved)';
 
@@ -802,6 +803,9 @@ class MaxClient {
 
   void _startKeepalive() {
     _keepalive?.cancel();
+    // Первый PING сразу: сервер ждёт heartbeat вскоре после входа и рвёт
+    // сокет, не дождавшись, — отсюда было «мигание» связи после входа.
+    unawaited(_ping());
     _keepalive = Timer.periodic(_pingInterval, (_) => unawaited(_ping()));
   }
 
@@ -810,20 +814,19 @@ class MaxClient {
     _keepalive = null;
   }
 
-  /// Лёгкий heartbeat: read-only запрос профиля (op 16) держит соединение
-  /// тёплым и заодно проверяет живость. Дедицированный ping-опкод протокола
-  /// в декомпиле не подтверждён, поэтому используем заведомо валидный запрос.
+  /// Heartbeat официальным опкодом PING (op 1). Именно его ждёт сервер,
+  /// чтобы не рвать сокет (frk.java: heartbeat(15)). Тело пустое.
   Future<void> _ping() async {
     if (_socket == null || _closed) return;
     try {
       await _request(
-        MaxOp.profile,
+        MaxOp.ping,
         const <String, Object?>{},
-        timeout: const Duration(seconds: 15),
+        timeout: const Duration(seconds: 10),
       );
     } catch (e) {
       // Реальный дроп/таймаут обработают onError/onDone → reconnect.
-      _log.d('${MvTag.socket} keepalive ping failed: $e');
+      _log.d('${MvTag.socket} PING failed: $e');
     }
   }
 
