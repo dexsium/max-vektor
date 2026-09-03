@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/constants.dart';
+import '../local/secure_storage.dart';
 import 'account.dart';
 
 /// Реестр аккаунтов: список и активный аккаунт.
@@ -156,10 +157,40 @@ class AccountStore {
       accounts = [first];
       return (accounts: accounts, activeId: first.id);
     }
+
+    // Есть ли у аккаунта сохранённый вход. Это надёжнее userId в карточке:
+    // токен пишется сразу при входе, а userId — только после загрузки
+    // профиля, которая может не успеть.
+    Future<bool> hasToken(MvAccount a) async =>
+        (await SecureStorage(a.id).readToken()) != null;
+
+    final signedIn = <MvAccount>[];
+    final empty = <MvAccount>[];
+    for (final a in accounts) {
+      (await hasToken(a) ? signedIn : empty).add(a);
+    }
+
+    // Пустые аккаунты, брошенные на полпути (нажали «Добавить аккаунт» и
+    // закрыли приложение), убираем при старте — но только если есть хотя бы
+    // один аккаунт со входом. Иначе оставляем один пустой под экран входа.
+    if (signedIn.isNotEmpty && empty.isNotEmpty) {
+      for (final a in empty) {
+        await purgeAccountData(a.id);
+      }
+      accounts = signedIn;
+      await _save(accounts);
+    }
+
     final saved = await activeId();
-    final exists = accounts.any((a) => a.id == saved);
-    final active = exists ? saved! : accounts.first.id;
-    if (!exists) await setActive(active);
+    // Активным делаем сохранённый, если он ещё существует и (когда есть
+    // залогиненные) сам залогинен. Так закрытие приложения на экране
+    // «Добавить аккаунт» не выбрасывает из уже открытого аккаунта.
+    final savedOk = accounts.any((a) => a.id == saved) &&
+        (signedIn.isEmpty || signedIn.any((a) => a.id == saved));
+    final active = savedOk
+        ? saved!
+        : (signedIn.isNotEmpty ? signedIn.first.id : accounts.first.id);
+    if (active != saved) await setActive(active);
     return (accounts: accounts, activeId: active);
   }
 }

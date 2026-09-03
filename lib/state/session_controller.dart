@@ -243,6 +243,18 @@ class SessionController extends Notifier<SessionState> {
     await ref.read(accountsProvider.notifier).addAndActivate();
   }
 
+  /// Отменить добавление аккаунта: если текущий аккаунт так и не вошёл,
+  /// удаляем его и возвращаемся на соседний. Кнопка «Назад» на экране входа.
+  Future<void> cancelAddAccount() async {
+    final accounts = ref.read(accountsProvider);
+    if (accounts.length <= 1) return;
+    final current = ref.read(activeAccountIdProvider);
+    // Уводим управление на другой аккаунт заранее, потом удаляем текущий.
+    final other = accounts.firstWhere((a) => a.id != current).id;
+    await ref.read(activeAccountIdProvider.notifier).switchTo(other);
+    await ref.read(accountsProvider.notifier).signOutAndRemove(current);
+  }
+
   /// Открыт ли уже сокет этого аккаунта — переключатель показывает это
   /// пользователю, чтобы было понятно, какие аккаунты сейчас онлайн.
   bool isAccountLive(String accountId) => AccountRuntimes.isOpen(accountId);

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
+import '../../state/providers.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../state/session_controller.dart';
 import '../widgets/code_input.dart';
@@ -63,35 +64,60 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final ctrl = ref.read(sessionProvider.notifier);
     final step = _tokenMode ? _Step.token : _stepOf(session);
 
+    // Есть куда вернуться, если этот экран открыт через «Добавить аккаунт»:
+    // в списке уже есть другой (залогиненный) аккаунт.
+    final canCancel = ref.watch(accountsProvider).length > 1;
+
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _header(step),
-                  const SizedBox(height: 28),
-                  if (session.error != null) ...[
-                    _ErrorBanner(text: session.error!),
-                    const SizedBox(height: 16),
-                  ],
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    child: Column(
-                      key: ValueKey(step),
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: _body(step, session, ctrl),
+      // Тап по пустому месту убирает клавиатуру.
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (canCancel)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    tooltip: 'Назад',
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: _busy ? null : () => ctrl.cancelAddAccount(),
+                  ),
+                ),
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(24, canCancel ? 8 : 32, 24, 32),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _header(step),
+                          const SizedBox(height: 28),
+                          if (session.error != null) ...[
+                            _ErrorBanner(text: session.error!),
+                            const SizedBox(height: 16),
+                          ],
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 220),
+                            child: Column(
+                              key: ValueKey(step),
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: _body(step, session, ctrl),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          _footer(step, ctrl),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  _footer(step, ctrl),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -143,8 +169,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   String _subtitle(_Step step) {
     final session = ref.read(sessionProvider);
     return switch (step) {
-      _Step.phone => '${AppMeta.disclaimer}. Введите номер телефона — '
-          'пришлём код подтверждения.',
+      _Step.phone => 'Введите номер телефона — пришлём код подтверждения.',
       // Канал доставки сервер не называет: при установленном официальном
       // приложении код обычно приходит push-ом в него, а не отдельной SMS.
       _Step.code => 'Отправили код на ${session.phone ?? 'ваш номер'}. '

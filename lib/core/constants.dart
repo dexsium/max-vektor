@@ -50,6 +50,13 @@ class MaxOp {
   /// `{source: 'auth', identifier: <phone>}` → `{link}`.
   /// Источник: модуль авторизации веб-клиента web.max.ru.
   static const int captchaSession = 224;
+
+  /// Генерация QR для входа: `{type: 0}` →
+  /// `{token/trackId, qrLink, expiresAt, pollingInterval}`.
+  static const int qrStart = 112;
+
+  /// Опрос статуса QR: `{trackId}` → `{status: {loginAvailable, expiresAt}}`.
+  static const int qrPoll = 104;
   static const int contactInfo = 32;
   static const int contactByPhone = 46;
   static const int chatInfo = 48;

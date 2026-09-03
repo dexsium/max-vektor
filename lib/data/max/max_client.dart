@@ -393,14 +393,17 @@ class MaxClient {
     );
     final hint = _actionableHint(r.code);
     if (hint != null) throw MaxLoginFailed(hint);
-    if (r.localized != null) throw MaxLoginFailed(r.localized!);
-    if (r.code != null) throw MaxLoginFailed('$op: ${r.code}');
-    if (r.message != null) throw MaxLoginFailed('$op: ${r.message}');
+    // Код сервера дописываем ВСЕГДА: localizedMessage часто сводится к
+    // «Ошибка валидации» и не даёт понять, что именно не так. Код (напр.
+    // validate.first_name.invalid_chars) — единственная надёжная зацепка.
+    final tail = r.code != null ? '\n[$op: ${r.code}]' : '\n[$op cmd=${f.cmd}]';
+    if (r.localized != null) throw MaxLoginFailed('${r.localized!}$tail');
+    if (r.message != null) throw MaxLoginFailed('${r.message!}$tail');
     throw MaxLoginFailed(
       '$op отклонён сервером (cmd=${f.cmd}) без объяснения причины. '
       'Обычно так отвечают на устаревшую версию клиента '
       '(app ${MaxProto.appVersion}, proto v${MaxProto.protoVersion}) '
-      'или на слишком частые попытки входа с одного номера.',
+      'или на слишком частые попытки входа с одного номера.$tail',
     );
   }
 
@@ -425,6 +428,25 @@ class MaxClient {
     if (d is! Map) return null;
     final link = d['link'];
     return (link is String && link.isNotEmpty) ? link : null;
+  }
+
+  /// Начать вход по QR (op 112). Возвращает сырой ответ сервера, чтобы
+  /// вызывающий сам вытащил qrLink/token — точные имена полей проверяются
+  /// живым probe (см. tool_probe_qr.dart).
+  Future<Map<String, dynamic>> qrStart() async {
+    final f = await _request(MaxOp.qrStart, {'type': 0});
+    if (f.cmd != 1) _failWith(f, 'QR_START');
+    final d = f.decoded;
+    _log.i('${MvTag.auth} QR_START ok: ${_redact(d)}');
+    return d is Map ? d.map((k, v) => MapEntry(k.toString(), v)) : {};
+  }
+
+  /// Опрос статуса QR (op 104). Возвращает сырой ответ сервера.
+  Future<Map<String, dynamic>> qrPoll(String trackId) async {
+    final f = await _request(MaxOp.qrPoll, {'trackId': trackId});
+    if (f.cmd != 1) _failWith(f, 'QR_POLL');
+    final d = f.decoded;
+    return d is Map ? d.map((k, v) => MapEntry(k.toString(), v)) : {};
   }
 
   Future<MaxSmsChallenge> startAuthSms(
