@@ -3,10 +3,26 @@ class MaxProto {
   static const String host = 'api.oneme.ru';
   static const int port = 443;
   static const int protoVersion = 10;
-  static const String appVersion = '26.15.0';
+  /// Версия официального клиента MAX, которой представляется приложение.
+  ///
+  /// ЭТО ЗНАЧЕНИЕ ПРОТУХАЕТ. Сервер сверяет его при AUTH_REQUEST (op 17) и
+  /// на устаревшем клиенте отвечает cmd=3 с текстом «Приложение устарело,
+  /// пожалуйста, обновитесь» — INIT при этом проходит, так что проблема
+  /// выглядит как поломка авторизации.
+  ///
+  /// 26.30.0 — версия из RuStore на 01.09.2026 (package ru.oneme.app),
+  /// проверена вживую: с ней AUTH_REQUEST принимается.
+  /// Как обновить, когда снова протухнет, — см. `tool_probe_auth.dart`
+  /// и раздел README «Сервер отвечает „Приложение устарело“».
+  static const String appVersion = '26.30.0';
 
-  /// versionCode официального APK (max_full.apk). Идёт в userAgent.buildNumber
-  /// и должен быть согласован с [appVersion] (26.15.0 → 6689).
+  /// versionCode официального APK. Идёт в userAgent.buildNumber.
+  ///
+  /// ВНИМАНИЕ: 6689 — versionCode версии 26.15.0, для 26.30.0 он не
+  /// подтверждён (в открытых источниках versionCode не публикуется).
+  /// Сервер его не проверяет — AUTH_REQUEST с этой парой проходит, — но
+  /// пара «26.30.0 + 6689» формально рассогласована. Если найдёте реальный
+  /// versionCode для текущей [appVersion], поставьте его сюда.
   static const int appBuild = 6689;
   static const String deviceType = 'ANDROID';
   static const String locale = 'ru';
