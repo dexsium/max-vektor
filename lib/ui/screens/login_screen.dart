@@ -292,7 +292,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             : () => _run(() => ctrl.requestSms(_phoneCtrl.text.trim())),
         child: _busy
             ? const CircularProgressIndicator()
-            : const Text('Получить SMS-код'),
+            : const Text('Получить код'),
+      ),
+      const SizedBox(height: 12),
+      // Регистрация нового аккаунта протоколом этого клиента не
+      // реализована: реверснут только вход (START_AUTH → LOGIN-токен).
+      // Без этой оговорки «код не приходит» на незарегистрированный
+      // номер выглядит как поломка приложения.
+      Text(
+        'Max Vektor выполняет вход в существующий аккаунт MAX. '
+        'Если номер ещё не зарегистрирован в MAX, сначала создайте '
+        'аккаунт в официальном приложении — регистрация здесь не '
+        'поддерживается.',
+        style: Theme.of(context).textTheme.bodySmall,
       ),
     ];
   }
