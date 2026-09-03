@@ -388,16 +388,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       items.add(const _ListItem.spinner());
     }
     DateTime? prevDay;
-    for (final m in msgs) {
+    for (var i = 0; i < msgs.length; i++) {
+      final m = msgs[i];
       final t = DateTime.fromMillisecondsSinceEpoch(m.timeMs);
       final day = DateTime(t.year, t.month, t.day);
-      if (prevDay == null || day != prevDay) {
+      final newDay = prevDay == null || day != prevDay;
+      if (newDay) {
         items.add(_ListItem.divider(day));
         prevDay = day;
       }
-      items.add(_ListItem.message(m));
+      // Серия = подряд идущие сообщения одного автора в один день.
+      final prev = i > 0 ? msgs[i - 1] : null;
+      final next = i < msgs.length - 1 ? msgs[i + 1] : null;
+      bool sameRun(MaxMessage? a, MaxMessage? b) {
+        if (a == null || b == null) return false;
+        if (a.direction != b.direction || a.senderId != b.senderId) return false;
+        final ta = DateTime.fromMillisecondsSinceEpoch(a.timeMs);
+        final tb = DateTime.fromMillisecondsSinceEpoch(b.timeMs);
+        return ta.year == tb.year && ta.month == tb.month && ta.day == tb.day;
+      }
+
+      final firstInRun = newDay || !sameRun(prev, m);
+      final lastInRun = !sameRun(next, m) ||
+          (next != null &&
+              DateTime.fromMillisecondsSinceEpoch(next.timeMs).day != day.day);
+      items.add(_ListItem.message(m,
+          firstInRun: firstInRun, lastInRun: lastInRun));
     }
-    return ListView.builder(
+    return Container(
+      color: Theme.of(context).colorScheme.surfaceContainerLowest,
+      child: ListView.builder(
       controller: _scroll,
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: items.length,
@@ -419,13 +439,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             return DateDivider(date: it.date!);
           case _ItemKind.message:
             final m = it.message!;
-            return GestureDetector(
+            final bubble = GestureDetector(
               onLongPress: () => _onMessageLongPress(m),
               child: MessageBubble(
                 message: m,
                 chatId: widget.chatId,
                 messageServerId: m.id,
                 senderLabel: _senderLabel(m),
+                showSenderName: it.firstInRun,
                 onRetry: m.status == MessageStatus.failed
                     ? () => ref
                         .read(chatHistoryProvider(widget.chatId).notifier)
@@ -433,8 +454,43 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     : null,
               ),
             );
+            // В группах входящие сообщения получают аватарную колонку слева;
+            // аватар рисуется только у последнего в серии.
+            final incomingGroup = _isMultiUserChat &&
+                m.direction == MessageDirection.incoming;
+            if (!incomingGroup) return bubble;
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                SizedBox(
+                  width: 44,
+                  child: it.lastInRun
+                      ? Padding(
+                          padding: const EdgeInsets.only(left: 8, bottom: 6),
+                          child: _senderAvatar(m),
+                        )
+                      : null,
+                ),
+                Flexible(child: bubble),
+              ],
+            );
         }
       },
+      ),
+    );
+  }
+
+  /// Кружок-аватар отправителя с инициалом и стабильным цветом по id.
+  Widget _senderAvatar(MaxMessage m) {
+    final label = _senderLabel(m);
+    final initial =
+        (label != null && label.isNotEmpty) ? label.characters.first.toUpperCase() : '?';
+    return CircleAvatar(
+      radius: 16,
+      backgroundColor: MessageBubble.senderColorFor(m.senderId),
+      foregroundColor: Colors.white,
+      child: Text(initial,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
     );
   }
 
@@ -483,11 +539,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 enum _ItemKind { spinner, divider, message }
 
 class _ListItem {
-  const _ListItem._(this.kind, {this.date, this.message});
+  const _ListItem._(this.kind,
+      {this.date,
+      this.message,
+      this.firstInRun = true,
+      this.lastInRun = true});
   const _ListItem.spinner() : this._(_ItemKind.spinner);
   _ListItem.divider(DateTime d) : this._(_ItemKind.divider, date: d);
-  _ListItem.message(MaxMessage m) : this._(_ItemKind.message, message: m);
+  _ListItem.message(MaxMessage m,
+      {bool firstInRun = true, bool lastInRun = true})
+      : this._(_ItemKind.message,
+            message: m, firstInRun: firstInRun, lastInRun: lastInRun);
   final _ItemKind kind;
   final DateTime? date;
   final MaxMessage? message;
+
+  /// Первое/последнее сообщение в серии подряд от одного автора (в пределах
+  /// одного дня). Имя рисуем над первым, аватар — у последнего.
+  final bool firstInRun;
+  final bool lastInRun;
 }

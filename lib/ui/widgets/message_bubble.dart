@@ -12,6 +12,7 @@ class MessageBubble extends StatelessWidget {
     this.chatId,
     this.messageServerId,
     this.senderLabel,
+    this.showSenderName = true,
   });
   final MaxMessage message;
 
@@ -29,6 +30,10 @@ class MessageBubble extends StatelessWidget {
   /// Имя отправителя. Заполняется только в группах и каналах — в диалоге
   /// 1:1 подпись избыточна.
   final String? senderLabel;
+
+  /// Показывать ли имя отправителя. В серии подряд идущих сообщений одного
+  /// автора имя рисуется только над первым (как в официальном приложении).
+  final bool showSenderName;
 
   @override
   Widget build(BuildContext context) {
@@ -66,14 +71,15 @@ class MessageBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Кто написал — только для входящих в группах/каналах.
-            if (!isOut && (senderLabel?.isNotEmpty ?? false)) ...[
+            // Кто написал — только для входящих в группах/каналах, и только
+            // над первым сообщением серии одного автора.
+            if (!isOut && showSenderName && (senderLabel?.isNotEmpty ?? false)) ...[
               Text(
                 senderLabel!,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w600,
-                  color: scheme.primary,
+                  color: _senderColor(),
                 ),
               ),
               const SizedBox(height: 2),
@@ -186,6 +192,23 @@ class MessageBubble extends StatelessWidget {
       ),
     );
   }
+
+  Color _senderColor() => senderColorFor(message.senderId);
+
+  /// Палитра цветов участников — как в официальном приложении каждому автору
+  /// свой стабильный цвет. Детерминированно по id отправителя.
+  static const _senderPalette = <Color>[
+    Color(0xFFE17076), // красный
+    Color(0xFFEDA86C), // оранжевый
+    Color(0xFFA695E7), // фиолетовый
+    Color(0xFF7BC862), // зелёный
+    Color(0xFF6EC9CB), // бирюзовый
+    Color(0xFF65AADD), // синий
+    Color(0xFFEE7AAE), // розовый
+  ];
+
+  static Color senderColorFor(int? senderId) =>
+      _senderPalette[(senderId ?? 0).abs() % _senderPalette.length];
 
   static IconData _statusIcon(MessageStatus s) {
     switch (s) {
