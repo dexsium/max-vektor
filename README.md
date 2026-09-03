@@ -16,7 +16,7 @@ Keychain, ни локальными данными.
 | iOS тесты | `ru.vektor.max.RunnerTests` |
 | Android applicationId | `ru.vektor.max` |
 | Dart-пакет | `max_vektor` |
-| Минимальный iOS | 13.0 |
+| Минимальный iOS | 15.0 |
 | Локальная БД | `max_vektor_<accId>.db` (своя у каждого аккаунта) |
 | Ключи Keychain | префикс `mv_a_<accId>_` |
 | Аккаунтов одновременно | до 5, у каждого свой `deviceId` |
@@ -67,9 +67,12 @@ pod install                     # при ошибке: pod install --repo-update
 cd ..
 ```
 
-`ios/Podfile` фиксирует `platform :ios, '13.0'` и приводит все поды к тому же
-минимальному таргету — иначе часть плагинов (`flutter_secure_storage`,
-`permission_handler`, `file_picker`) не собирается.
+`ios/Podfile` фиксирует `platform :ios, '15.0'` и приводит все поды к тому же
+минимальному таргету. 15.0 — это минимум самого Flutter (см.
+`Flutter.podspec` в `podhelper.rb`); при более низком значении CocoaPods не
+находит совместимый под `Flutter` и `pod install` падает с «required a
+higher minimum deployment target». Соответственно, iOS 13 и 14 не
+поддерживаются.
 
 ### 4. Открыть проект
 
