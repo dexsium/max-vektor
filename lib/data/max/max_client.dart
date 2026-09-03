@@ -1367,6 +1367,9 @@ class MaxClient {
     int? cid;
     String? forwardName;
     int? forwardId;
+    int? replyToId;
+    String? replyPreview;
+    int? replyFromId;
 
     final d = f.decoded;
     if (d is Map) {
@@ -1383,6 +1386,10 @@ class MaxClient {
         final fwd = forwardFromLink(mm['link']);
         forwardName = fwd.name;
         forwardId = fwd.senderId;
+        final rep = replyFromLink(mm['link']);
+        replyToId = rep.id;
+        replyPreview = rep.preview;
+        replyFromId = rep.senderId;
         final at = mm['attaches'] ?? mm['attachments'];
         if (at is List) {
           attaches = at
@@ -1435,6 +1442,9 @@ class MaxClient {
       cid: cid,
       forwardFromName: forwardName,
       forwardFromId: forwardId,
+      replyToId: replyToId,
+      replyToPreview: replyPreview,
+      replyFromId: replyFromId,
     );
   }
 
@@ -1459,6 +1469,27 @@ class MaxClient {
     return (
       name: (name != null && name.isNotEmpty) ? name : null,
       senderId: senderId,
+    );
+  }
+
+  /// Данные цитаты из объекта `link` серверного сообщения (type=REPLY):
+  /// id сообщения-цитаты, текст-превью и id автора. Структура — та же
+  /// pma.java (вложенное `message` несёт id/sender/text). Возвращает нули,
+  /// если это не reply.
+  static ({int? id, String? preview, int? senderId}) replyFromLink(
+      Object? link) {
+    if (link is! Map) return (id: null, preview: null, senderId: null);
+    final lm = link.map((k, v) => MapEntry(k.toString(), v));
+    final type = lm['type']?.toString().toUpperCase();
+    if (type != 'REPLY') return (id: null, preview: null, senderId: null);
+    final nested = lm['message'];
+    if (nested is! Map) return (id: null, preview: null, senderId: null);
+    final nm = nested.map((k, v) => MapEntry(k.toString(), v));
+    final preview = nm['text']?.toString();
+    return (
+      id: _toInt(nm['id']),
+      preview: (preview != null && preview.isNotEmpty) ? preview : null,
+      senderId: _toInt(nm['sender']),
     );
   }
 

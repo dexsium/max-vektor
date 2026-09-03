@@ -13,9 +13,18 @@ import 'media_gallery_screen.dart';
 import 'profile_screen.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
-  const ChatScreen({super.key, required this.chatId, this.title});
+  const ChatScreen({
+    super.key,
+    required this.chatId,
+    this.title,
+    this.unreadCount = 0,
+  });
   final int chatId;
   final String? title;
+
+  /// Сколько сообщений было непрочитано при открытии — над первым из них
+  /// рисуется разделитель «Новые сообщения» (как в официальном приложении).
+  final int unreadCount;
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -387,6 +396,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (loadingOlder) {
       items.add(const _ListItem.spinner());
     }
+    // Позиция первого непрочитанного (последние unreadCount сообщений).
+    final unread = widget.unreadCount;
+    final firstUnread =
+        (unread > 0 && unread < msgs.length) ? msgs.length - unread : -1;
+
     DateTime? prevDay;
     for (var i = 0; i < msgs.length; i++) {
       final m = msgs[i];
@@ -397,6 +411,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         items.add(_ListItem.divider(day));
         prevDay = day;
       }
+      if (i == firstUnread) items.add(const _ListItem.unread());
       // Серия = подряд идущие сообщения одного автора в один день.
       final prev = i > 0 ? msgs[i - 1] : null;
       final next = i < msgs.length - 1 ? msgs[i + 1] : null;
@@ -437,6 +452,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             );
           case _ItemKind.divider:
             return DateDivider(date: it.date!);
+          case _ItemKind.unread:
+            return _unreadDivider();
           case _ItemKind.message:
             final m = it.message!;
             final bubble = GestureDetector(
@@ -448,6 +465,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 senderLabel: _senderLabel(m),
                 showSenderName: it.firstInRun,
                 forwardLabel: _forwardLabel(m),
+                replyLabel: _replyLabel(m),
                 onRetry: m.status == MessageStatus.failed
                     ? () => ref
                         .read(chatHistoryProvider(widget.chatId).notifier)
@@ -491,6 +509,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return ref.watch(userDisplayNameProvider(id)).maybeWhen(
           data: (n) => (n != null && n.isNotEmpty) ? n : 'Пользователь',
           orElse: () => 'Пользователь',
+        );
+  }
+
+  /// Разделитель «Новые сообщения» над первым непрочитанным.
+  Widget _unreadDivider() {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      color: scheme.primaryContainer.withValues(alpha: 0.5),
+      child: Center(
+        child: Text(
+          'Новые сообщения',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: scheme.onPrimaryContainer,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Резолвнутое имя автора сообщения-цитаты (по replyFromId).
+  String? _replyLabel(MaxMessage m) {
+    final id = m.replyFromId;
+    if (id == null) return null;
+    return ref.watch(userDisplayNameProvider(id)).maybeWhen(
+          data: (n) => (n != null && n.isNotEmpty) ? n : null,
+          orElse: () => null,
         );
   }
 
@@ -550,7 +598,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 }
 
-enum _ItemKind { spinner, divider, message }
+enum _ItemKind { spinner, divider, unread, message }
 
 class _ListItem {
   const _ListItem._(this.kind,
@@ -559,6 +607,7 @@ class _ListItem {
       this.firstInRun = true,
       this.lastInRun = true});
   const _ListItem.spinner() : this._(_ItemKind.spinner);
+  const _ListItem.unread() : this._(_ItemKind.unread);
   _ListItem.divider(DateTime d) : this._(_ItemKind.divider, date: d);
   _ListItem.message(MaxMessage m,
       {bool firstInRun = true, bool lastInRun = true})

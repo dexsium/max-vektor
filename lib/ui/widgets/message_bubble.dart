@@ -14,6 +14,7 @@ class MessageBubble extends StatelessWidget {
     this.senderLabel,
     this.showSenderName = true,
     this.forwardLabel,
+    this.replyLabel,
   });
   final MaxMessage message;
 
@@ -39,6 +40,10 @@ class MessageBubble extends StatelessWidget {
   /// Готовая подпись источника форварда (имя канала/чата или резолвнутое имя
   /// автора при форварде от лички). Если null — берём [MaxMessage.forwardFromName].
   final String? forwardLabel;
+
+  /// Резолвнутое имя автора сообщения-цитаты (по replyFromId). Рисуется над
+  /// текстом цитаты, если задано.
+  final String? replyLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -226,23 +231,43 @@ class MessageBubble extends StatelessWidget {
         : preview.length > 80
             ? '${preview.substring(0, 80)}...'
             : preview;
+    final author = replyLabel?.trim();
+    final accent = senderColorFor(message.replyFromId);
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
       decoration: BoxDecoration(
+        color: fg.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(6),
         border: Border(
-          left: BorderSide(color: fg.withValues(alpha: 0.6), width: 3),
+          left: BorderSide(color: accent, width: 3),
         ),
       ),
-      child: Text(
-        label,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 12,
-          color: fg.withValues(alpha: 0.8),
-          fontStyle: FontStyle.italic,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (author != null && author.isNotEmpty)
+            Text(
+              author,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: accent,
+              ),
+            ),
+          Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              color: fg.withValues(alpha: 0.8),
+            ),
+          ),
+        ],
       ),
     );
   }

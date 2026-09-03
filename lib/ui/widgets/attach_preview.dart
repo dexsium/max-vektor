@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/local/cache_managers.dart';
 import '../../data/max/models/attach.dart';
 import '../../state/providers.dart';
+import 'voice_message.dart';
 import '../screens/video_player_screen.dart';
 import 'app_snack.dart';
 import '../../state/chats_controller.dart';
@@ -269,48 +270,7 @@ class _AttachPreviewState extends ConsumerState<AttachPreview> {
   }
 
   Widget _buildAudio(BuildContext context, ColorScheme scheme) {
-    final dur = attach.durationMs != null
-        ? _formatDuration(attach.durationMs!)
-        : '--:--';
-    return InkWell(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Аудио TODO')),
-        );
-      },
-      child: Container(
-        width: _previewWidth,
-        padding: const EdgeInsets.all(10),
-        child: Row(
-          children: [
-            Icon(Icons.mic, size: 28, color: scheme.primary),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Аудио',
-                    style: TextStyle(
-                      color: scheme.onSurface,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    dur,
-                    style: TextStyle(
-                      color: scheme.onSurfaceVariant,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    return VoiceMessage(attach: attach, width: _previewWidth);
   }
 
   Widget _buildFile(

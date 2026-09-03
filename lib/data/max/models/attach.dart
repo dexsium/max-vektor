@@ -75,6 +75,10 @@ class MaxAttach extends Equatable {
   /// null = ещё не запрашивалась или сервер не вернул текст.
   final String? transcription;
 
+  /// Амплитуды волны голосового сообщения (0..N). Приходят с сервера в поле
+  /// `waveform`. В БД не сохраняются — при перезагрузке рисуем ровный паттерн.
+  final List<int>? waveform;
+
   const MaxAttach({
     required this.type,
     this.status = MaxAttachStatus.idle,
@@ -92,6 +96,7 @@ class MaxAttach extends Equatable {
     this.fileName,
     this.progress = 0,
     this.transcription,
+    this.waveform,
   });
 
   MaxAttach copyWith({
@@ -110,6 +115,7 @@ class MaxAttach extends Equatable {
     String? fileName,
     double? progress,
     String? transcription,
+    List<int>? waveform,
   }) {
     return MaxAttach(
       type: type,
@@ -128,6 +134,7 @@ class MaxAttach extends Equatable {
       fileName: fileName ?? this.fileName,
       progress: progress ?? this.progress,
       transcription: transcription ?? this.transcription,
+      waveform: waveform ?? this.waveform,
     );
   }
 
@@ -232,8 +239,16 @@ class MaxAttach extends Equatable {
     final videoUrl =
         m['videoUrl']?.toString() ?? m['embedUrl']?.toString();
 
+    // Аудио несёт прямую ссылку в attach: url (иногда audioUrl).
+    final audioUrl = m['url']?.toString() ?? m['audioUrl']?.toString();
+
     String? displayUrl;
-    if ((type == MaxAttachType.video || type == MaxAttachType.videoMsg) &&
+    if (type == MaxAttachType.audio &&
+        audioUrl != null &&
+        audioUrl.isNotEmpty) {
+      displayUrl = audioUrl;
+    } else if ((type == MaxAttachType.video ||
+            type == MaxAttachType.videoMsg) &&
         videoUrl != null &&
         videoUrl.isNotEmpty) {
       displayUrl = videoUrl;
@@ -272,7 +287,18 @@ class MaxAttach extends Equatable {
       downloadUrl: displayUrl,
       thumbnailUrl: thumbUrl,
       fileName: m['name']?.toString(),
+      waveform: _parseWaveform(m['waveform']),
     );
+  }
+
+  /// Волна голосового: сервер может прислать список чисел (амплитуды).
+  static List<int>? _parseWaveform(Object? v) {
+    if (v is! List || v.isEmpty) return null;
+    final out = <int>[];
+    for (final e in v) {
+      if (e is num) out.add(e.toInt());
+    }
+    return out.isEmpty ? null : out;
   }
 
   @override
@@ -293,5 +319,6 @@ class MaxAttach extends Equatable {
     fileName,
     progress,
     transcription,
+    waveform,
   ];
 }

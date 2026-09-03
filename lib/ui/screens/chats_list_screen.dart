@@ -171,11 +171,17 @@ class _ChatTile extends ConsumerWidget {
     return InkWell(
       onLongPress: () => _showActions(context, ref, chat),
       onTap: () async {
+        // Запоминаем непрочитанные ДО сброса — для разделителя «Новые сообщения».
+        final unread = chat.unreadCount;
         await ref.read(chatsListProvider.notifier).markRead(chat.id);
         if (!context.mounted) return;
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => ChatScreen(chatId: chat.id, title: chat.title),
+            builder: (_) => ChatScreen(
+              chatId: chat.id,
+              title: chat.title,
+              unreadCount: unread,
+            ),
           ),
         );
       },

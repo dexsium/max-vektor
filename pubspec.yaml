@@ -1,7 +1,7 @@
 name: max_vektor
 description: "Max Vektor — неофициальный клиент мессенджера MAX (iOS/Android)"
 publish_to: 'none'
-version: 0.9.0+1
+version: 0.10.0+1
 
 environment:
   sdk: ^3.7.2
@@ -53,6 +53,9 @@ dependencies:
 
   # Нативный плеер видео (iOS AVPlayer / Android ExoPlayer).
   video_player: ^2.9.2
+
+  # Проигрывание голосовых/аудио сообщений.
+  audioplayers: ^6.1.0
 
   # Медиа (UI; реальная отправка медиа — TODO, опкоды протокола не реверснуты)
   image_picker: ^1.1.2

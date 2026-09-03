@@ -32,7 +32,7 @@ class AppDatabase {
     final path = p.join(dir.path, AppMeta.dbNameFor(accountId));
     final db = await openDatabase(
       path,
-      version: 10,
+      version: 11,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -118,6 +118,10 @@ class AppDatabase {
       // контактам в UI, когда chatName пуст.
       await db.execute('ALTER TABLE messages ADD COLUMN forward_from_id INTEGER');
     }
+    if (oldVersion < 11) {
+      // id автора сообщения-цитаты (link.type=REPLY) — для имени над цитатой.
+      await db.execute('ALTER TABLE messages ADD COLUMN reply_from_id INTEGER');
+    }
   }
 
   static Future<void> _createAttachmentsTable(Database db) async {
@@ -195,6 +199,7 @@ class AppDatabase {
         status TEXT NOT NULL DEFAULT 'sent',
         reply_to_id INTEGER,
         reply_to_preview TEXT,
+        reply_from_id INTEGER,
         edited_at INTEGER,
         cid INTEGER,
         forward_from TEXT,

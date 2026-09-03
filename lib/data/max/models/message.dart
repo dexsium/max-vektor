@@ -25,6 +25,10 @@ class MaxMessage extends Equatable {
   /// дополнительного запроса в БД.
   final String? replyToPreview;
 
+  /// id автора сообщения-цитаты — для показа его имени над цитатой (резолвится
+  /// по контактам в UI). Из link.type=REPLY, sender вложенного message.
+  final int? replyFromId;
+
   /// Вложения сообщения. Хранятся в отдельной таблице `attachments`,
   /// подгружаются репозиторием. В `toMap`/`fromDbRow` НЕ участвуют.
   final List<MaxAttach> attaches;
@@ -56,6 +60,7 @@ class MaxMessage extends Equatable {
     this.localId,
     this.replyToId,
     this.replyToPreview,
+    this.replyFromId,
     this.attaches = const [],
     this.editedAtMs,
     this.forwardFromName,
@@ -69,6 +74,7 @@ class MaxMessage extends Equatable {
     int? timeMs,
     int? replyToId,
     String? replyToPreview,
+    int? replyFromId,
     List<MaxAttach>? attaches,
     int? editedAtMs,
     String? forwardFromName,
@@ -85,6 +91,7 @@ class MaxMessage extends Equatable {
       localId: localId,
       replyToId: replyToId ?? this.replyToId,
       replyToPreview: replyToPreview ?? this.replyToPreview,
+      replyFromId: replyFromId ?? this.replyFromId,
       attaches: attaches ?? this.attaches,
       editedAtMs: editedAtMs ?? this.editedAtMs,
       forwardFromName: forwardFromName ?? this.forwardFromName,
@@ -105,6 +112,7 @@ class MaxMessage extends Equatable {
     'status': status.name,
     'reply_to_id': replyToId,
     'reply_to_preview': replyToPreview,
+    'reply_from_id': replyFromId,
     'edited_at': editedAtMs,
     'forward_from': forwardFromName,
     'forward_from_id': forwardFromId,
@@ -127,6 +135,7 @@ class MaxMessage extends Equatable {
     ),
     replyToId: r['reply_to_id'] as int?,
     replyToPreview: r['reply_to_preview'] as String?,
+    replyFromId: (r['reply_from_id'] as num?)?.toInt(),
     editedAtMs: (r['edited_at'] as num?)?.toInt(),
     forwardFromName: r['forward_from'] as String?,
     forwardFromId: (r['forward_from_id'] as num?)?.toInt(),
@@ -144,6 +153,7 @@ class MaxMessage extends Equatable {
     status,
     replyToId,
     replyToPreview,
+    replyFromId,
     attaches,
     editedAtMs,
     forwardFromName,

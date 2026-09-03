@@ -26,6 +26,11 @@ class IncomingMessage extends Equatable {
   /// форварда от лички, имя резолвится по контактам в UI.
   final int? forwardFromId;
 
+  /// Данные цитаты (link.type=REPLY): id, превью-текст, id автора.
+  final int? replyToId;
+  final String? replyToPreview;
+  final int? replyFromId;
+
   const IncomingMessage({
     required this.chatId,
     required this.text,
@@ -37,6 +42,9 @@ class IncomingMessage extends Equatable {
     this.cid,
     this.forwardFromName,
     this.forwardFromId,
+    this.replyToId,
+    this.replyToPreview,
+    this.replyFromId,
   });
 
   @override
@@ -50,5 +58,8 @@ class IncomingMessage extends Equatable {
         cid,
         forwardFromName,
         forwardFromId,
+        replyToId,
+        replyToPreview,
+        replyFromId,
       ];
 }

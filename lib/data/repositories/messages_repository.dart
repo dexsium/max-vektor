@@ -165,6 +165,7 @@ class MessagesRepository {
           ? MessageDirection.outgoing
           : MessageDirection.incoming;
       final fwd = MaxClient.forwardFromLink(m['link']);
+      final rep = MaxClient.replyFromLink(m['link']);
       final msg = MaxMessage(
         id: id,
         chatId: chatId,
@@ -174,6 +175,9 @@ class MessagesRepository {
         direction: dir,
         forwardFromName: fwd.name,
         forwardFromId: fwd.senderId,
+        replyToId: rep.id,
+        replyToPreview: rep.preview,
+        replyFromId: rep.senderId,
       );
       await db.insertMessage(msg);
       if (hasAttaches && id != null) {
@@ -951,6 +955,9 @@ class MessagesRepository {
       direction: dir,
       forwardFromName: m.forwardFromName,
       forwardFromId: m.forwardFromId,
+      replyToId: m.replyToId,
+      replyToPreview: m.replyToPreview,
+      replyFromId: m.replyFromId,
     );
     await db.insertMessage(msg);
     if (m.attaches.isNotEmpty && m.messageId != null) {
