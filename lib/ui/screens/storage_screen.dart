@@ -2,9 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/local/storage_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../../state/media_prefs_controller.dart';
 import '../../state/providers.dart';
 import '../widgets/app_snack.dart';
+
+/// Локализованная подпись срока хранения кэша.
+String cacheKeepLabel(BuildContext context, CacheKeep k) {
+  final l = L.of(context);
+  return switch (k) {
+    CacheKeep.week => l.keepWeek,
+    CacheKeep.month => l.keepMonth,
+    CacheKeep.year => l.keepYear,
+    CacheKeep.forever => l.keepForever,
+  };
+}
 
 /// Раздел «Память» — срок хранения кэша, размеры по категориям и очистка.
 ///
@@ -38,9 +50,8 @@ class _StorageScreenState extends ConsumerState<StorageScreen> {
     final total = _usage?.total ?? 0;
     if (total <= 0) return;
     final ok = await _confirm(
-      'Очистить кэш?',
-      'Освободится ${StorageService.humanSize(total)}. Медиа можно будет '
-          'загрузить снова из чатов.',
+      L.of(context).stClearCache,
+      StorageService.humanSize(total),
     );
     if (ok != true) return;
     setState(() => _clearing = true);
@@ -48,16 +59,16 @@ class _StorageScreenState extends ConsumerState<StorageScreen> {
     await _recalc();
     if (mounted) {
       setState(() => _clearing = false);
-      AppSnack.show(context, 'Кэш очищен', icon: Icons.check);
+      AppSnack.show(context, L.of(context).commonDone, icon: Icons.check);
     }
   }
 
   Future<void> _clearCategory(StorageCategory cat, String title) async {
-    final ok = await _confirm('Очистить «$title»?', 'Файлы можно загрузить снова.');
+    final ok = await _confirm('«$title»', L.of(context).stClearCache);
     if (ok != true) return;
     await StorageService.clearCategory(cat, _accountId);
     await _recalc();
-    if (mounted) AppSnack.show(context, 'Готово', icon: Icons.check);
+    if (mounted) AppSnack.show(context, L.of(context).commonDone, icon: Icons.check);
   }
 
   Future<bool?> _confirm(String title, String body) => showDialog<bool>(
@@ -68,10 +79,10 @@ class _StorageScreenState extends ConsumerState<StorageScreen> {
           actions: [
             TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Отмена')),
+                child: Text(L.of(ctx).commonCancel)),
             FilledButton(
                 onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Очистить')),
+                child: Text(L.of(ctx).stClearCache)),
           ],
         ),
       );
@@ -84,14 +95,14 @@ class _StorageScreenState extends ConsumerState<StorageScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text('Хранить медиа в кэше устройства',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(L.of(ctx).stKeepMedia,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
             ),
             for (final k in CacheKeep.values)
               ListTile(
-                title: Text(k.label),
+                title: Text(cacheKeepLabel(ctx, k)),
                 trailing: k == current
                     ? Icon(Icons.check, color: Theme.of(ctx).colorScheme.primary)
                     : null,
@@ -114,9 +125,10 @@ class _StorageScreenState extends ConsumerState<StorageScreen> {
     final scheme = Theme.of(context).colorScheme;
     final keep = ref.watch(mediaPrefsProvider).cacheKeep;
     final u = _usage;
+    final l = L.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Память')),
+      appBar: AppBar(title: Text(l.stTitle)),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 12),
         children: [
@@ -124,15 +136,16 @@ class _StorageScreenState extends ConsumerState<StorageScreen> {
           _Card(
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              title: const Text('Хранить медиа в кэше устройства'),
-              subtitle: const Padding(
-                padding: EdgeInsets.only(top: 4),
-                child: Text('После удаления медиа можно загрузить снова'),
+              title: Text(l.stKeepMedia),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(l.stKeepMediaSub),
               ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(keep.label, style: TextStyle(color: scheme.onSurfaceVariant)),
+                  Text(cacheKeepLabel(context, keep),
+                      style: TextStyle(color: scheme.onSurfaceVariant)),
                   const SizedBox(width: 4),
                   Icon(Icons.chevron_right, color: scheme.outline),
                 ],
@@ -140,18 +153,19 @@ class _StorageScreenState extends ConsumerState<StorageScreen> {
               onTap: _pickKeep,
             ),
           ),
-          const _SectionLabel('Данные'),
+          _SectionLabel(l.stData),
           _Card(
             child: Column(
               children: [
-                _dataRow('Стикеры', u?.stickers,
-                    () => _clearCategory(StorageCategory.stickers, 'Стикеры')),
+                _dataRow(l.stStickers, u?.stickers,
+                    () => _clearCategory(StorageCategory.stickers, l.stStickers)),
                 const _Divider(),
-                _dataRow('Фото', u?.photos,
-                    () => _clearCategory(StorageCategory.photos, 'Фото')),
+                _dataRow(l.stPhoto, u?.photos,
+                    () => _clearCategory(StorageCategory.photos, l.stPhoto)),
                 const _Divider(),
-                _dataRow('Аудиосообщения', u?.audio,
-                    () => _clearCategory(StorageCategory.audio, 'Аудиосообщения')),
+                _dataRow(l.stAudioMessages, u?.audio,
+                    () => _clearCategory(
+                        StorageCategory.audio, l.stAudioMessages)),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
                   child: SizedBox(
@@ -172,8 +186,8 @@ class _StorageScreenState extends ConsumerState<StorageScreen> {
                           : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Text('Очистить кэш',
-                                    style: TextStyle(
+                                Text(l.stClearCache,
+                                    style: const TextStyle(
                                         fontSize: 16, fontWeight: FontWeight.w600)),
                                 if (u != null && u.total > 0) ...[
                                   const SizedBox(width: 8),

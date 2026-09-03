@@ -1,7 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../state/media_prefs_controller.dart';
+
+/// Локализованная подпись режима автозагрузки.
+String autoLabel(BuildContext context, MediaAuto m) {
+  final l = L.of(context);
+  return switch (m) {
+    MediaAuto.always => l.autoAlways,
+    MediaAuto.wifi => l.autoWifi,
+    MediaAuto.never => l.autoNever,
+  };
+}
 
 /// «Экономия батареи и сети» — автозагрузка и автовоспроизведение медиа.
 ///
@@ -15,46 +26,47 @@ class DataSaverScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final prefs = ref.watch(mediaPrefsProvider);
     final ctrl = ref.read(mediaPrefsProvider.notifier);
+    final l = L.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Экономия батареи и сети')),
+      appBar: AppBar(title: Text(l.dsTitle)),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
-          const _SectionLabel('Фото'),
+          _SectionLabel(l.dsPhoto),
           _Group(children: [
             _AutoTile(
-              title: 'Автозагрузка',
+              title: l.dsAutoload,
               value: prefs.photoAutoload,
               onPick: ctrl.setPhotoAutoload,
             ),
           ]),
-          const _SectionLabel('Видео'),
+          _SectionLabel(l.dsVideo),
           _Group(children: [
             _QualityTile(
-              title: 'Качество при отправке',
+              title: l.dsSendQuality,
               value: prefs.videoSendQuality,
               onPick: ctrl.setVideoSendQuality,
             ),
             const _Divider(),
             _AutoTile(
-              title: 'Автовоспроизведение',
+              title: l.dsAutoplay,
               value: prefs.videoAutoplay,
               onPick: ctrl.setVideoAutoplay,
             ),
           ]),
-          const _SectionLabel('Гифки'),
+          _SectionLabel(l.dsGif),
           _Group(children: [
             SwitchListTile(
-              title: const Text('Автовоспроизведение'),
+              title: Text(l.dsAutoplay),
               value: prefs.gifAutoplay,
               onChanged: ctrl.setGifAutoplay,
             ),
           ]),
-          const _SectionLabel('Аудиосообщения'),
+          _SectionLabel(l.dsAudioMessages),
           _Group(children: [
             _AutoTile(
-              title: 'Автозагрузка',
+              title: l.dsAutoload,
               value: prefs.audioAutoload,
               onPick: ctrl.setAudioAutoload,
             ),
@@ -85,7 +97,7 @@ class _AutoTile extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(value.label,
+          Text(autoLabel(context, value),
               style: TextStyle(color: scheme.onSurfaceVariant)),
           const SizedBox(width: 4),
           Icon(Icons.chevron_right, color: scheme.outline),
@@ -105,7 +117,7 @@ class _AutoTile extends StatelessWidget {
                 ),
                 for (final m in MediaAuto.values)
                   ListTile(
-                    title: Text(m.label),
+                    title: Text(autoLabel(context, m)),
                     trailing: m == value
                         ? Icon(Icons.check,
                             color: Theme.of(ctx).colorScheme.primary)

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../widgets/app_snack.dart';
 
@@ -30,16 +31,16 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
   };
   bool _safeMode = false;
 
-  static const _access = {
-    'ALL': 'все',
-    'CONTACTS': 'могут контакты',
-    'NOBODY': 'никто',
-  };
-  static const _visibility = {
-    'ALL': 'все',
-    'CONTACTS': 'контакты',
-    'NOBODY': 'никто',
-  };
+  Map<String, String> _accessLabels(L l) => {
+        'ALL': l.accessAll,
+        'CONTACTS': l.accessContacts,
+        'NOBODY': l.accessNobody,
+      };
+  Map<String, String> _visibilityLabels(L l) => {
+        'ALL': l.visibilityAll,
+        'CONTACTS': l.visibilityContacts,
+        'NOBODY': l.visibilityNobody,
+      };
 
   Future<void> _set(String key, String value) async {
     final prev = _values[key];
@@ -49,35 +50,35 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _values[key] = prev ?? value);
-        AppSnack.show(context, 'Не удалось сохранить: $e', error: true);
+        AppSnack.show(context, '$e', error: true);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = L.of(context);
+    final access = _accessLabels(l);
+    final visibility = _visibilityLabels(l);
     return Scaffold(
-      appBar: AppBar(title: const Text('Безопасность')),
+      appBar: AppBar(title: Text(l.secTitle)),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 12),
         children: [
           _Group(children: [
             _NavTile(
               icon: Icons.vpn_key_outlined,
-              title: 'Пароль для входа',
-              subtitle: 'Двухфакторная защита',
+              title: l.secPassword,
+              subtitle: l.secPasswordSub,
               badge: true,
-              onTap: () => AppSnack.show(
-                context,
-                'Пароль 2FA задаётся при входе. Управление паролем — в разработке.',
-              ),
+              onTap: () => AppSnack.show(context, l.secPasswordSub),
             ),
           ]),
           _Group(children: [
             _NavTile(
               icon: Icons.shield_outlined,
-              title: 'Семейная защита',
-              subtitle: 'Отключена',
+              title: l.secFamily,
+              subtitle: l.secFamilyOff,
               onTap: () => AppSnack.soon(context),
             ),
           ]),
@@ -85,7 +86,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             SwitchListTile(
               secondary: Icon(Icons.lock_outline,
                   color: Theme.of(context).colorScheme.primary),
-              title: const Text('Безопасный режим'),
+              title: Text(l.secSafeMode),
               value: _safeMode,
               onChanged: (v) {
                 setState(() => _safeMode = v);
@@ -93,29 +94,29 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
               },
             ),
             const _Divider(),
-            _pickerTile('Позвонить', 'app.privacy.incoming.call', _access),
+            _pickerTile(l.secCall, 'app.privacy.incoming.call', access),
             const _Divider(),
             _pickerTile(
-                'Найти меня по номеру', 'app.privacy.search_by_phone', _access),
+                l.secFindByPhone, 'app.privacy.search_by_phone', access),
             const _Divider(),
-            _pickerTile('Показывать контент', 'app.privacy.content.level.access',
-                _access),
+            _pickerTile(l.secShowContent,
+                'app.privacy.content.level.access', access),
             const _Divider(),
-            _pickerTile('Пригласить в чат', 'app.privacy.chats.invite', _access),
+            _pickerTile(l.secInviteToChat, 'app.privacy.chats.invite', access),
           ]),
-          const _SectionLabel('Информация'),
+          _SectionLabel(l.secInfo),
           _Group(children: [
             _pickerTile(
-                'Видеть статус «в сети»', 'app.privacy.online.show', _visibility),
+                l.secSeeOnline, 'app.privacy.online.show', visibility),
             const _Divider(),
-            _pickerTile('Видеть мой номер', 'app.privacy.phone.number.privacy',
-                _visibility),
+            _pickerTile(l.secSeeNumber, 'app.privacy.phone.number.privacy',
+                visibility),
           ]),
           _Group(children: [
             _NavTile(
               icon: Icons.block,
-              title: 'Чёрный список',
-              subtitle: 'Кто не может писать, звонить и добавлять в чаты',
+              title: l.secBlacklist,
+              subtitle: l.secBlacklistSub,
               onTap: () => AppSnack.soon(context),
             ),
           ]),

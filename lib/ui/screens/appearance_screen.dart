@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../state/appearance_controller.dart';
 import '../../state/theme_controller.dart';
 import '../theme/wallpapers.dart';
@@ -13,21 +14,22 @@ class AppearanceScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = L.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Оформление')),
+      appBar: AppBar(title: Text(l.apprTitle)),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        children: const [
-          _SectionLabel('Размер текста'),
-          _TextSizeCard(),
-          SizedBox(height: 8),
-          _SectionLabel('Тема'),
-          _ThemeSegmented(),
-          SizedBox(height: 12),
-          _ChatPreview(),
-          SizedBox(height: 16),
-          _WallpaperRow(),
-          SizedBox(height: 24),
+        children: [
+          _SectionLabel(l.apprTextSize),
+          const _TextSizeCard(),
+          const SizedBox(height: 8),
+          _SectionLabel(l.apprTheme),
+          const _ThemeSegmented(),
+          const SizedBox(height: 12),
+          const _ChatPreview(),
+          const SizedBox(height: 16),
+          const _WallpaperRow(),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -47,8 +49,9 @@ class _TextSizeCard extends ConsumerWidget {
         children: [
           SwitchListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-            title: const Text('Как в системе',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w500)),
+            title: Text(L.of(context).apprSystemSize,
+                style:
+                    const TextStyle(fontSize: 17, fontWeight: FontWeight.w500)),
             value: ts.system,
             onChanged: ctrl.setSystem,
           ),
@@ -76,7 +79,7 @@ class _TextSizeCard extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
-                'Размер берётся из настроек устройства',
+                L.of(context).apprSystemSizeHint,
                 style: TextStyle(
                     color: scheme.onSurfaceVariant, fontSize: 12),
               ),
@@ -121,6 +124,7 @@ class _ThemeSegmented extends ConsumerWidget {
       );
     }
 
+    final l = L.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Container(
@@ -130,9 +134,9 @@ class _ThemeSegmented extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            seg('Системная', ThemeMode.system),
-            seg('Светлая', ThemeMode.light),
-            seg('Тёмная', ThemeMode.dark),
+            seg(l.themeSystem, ThemeMode.system),
+            seg(l.themeLight, ThemeMode.light),
+            seg(l.themeDark, ThemeMode.dark),
           ],
         ),
       ),
@@ -148,6 +152,7 @@ class _ChatPreview extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final wp = wallpaperById(ref.watch(chatWallpaperProvider));
     final scheme = Theme.of(context).colorScheme;
+    final l = L.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: ClipRRect(
@@ -160,7 +165,7 @@ class _ChatPreview extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _bubble(
-                  'Выберите тему, чтобы изменить фон и цвет сообщений 🎨',
+                  l.apprPreviewIncoming1,
                   incoming: true,
                   scheme: scheme,
                 ),
@@ -170,8 +175,7 @@ class _ChatPreview extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      _outgoingBubble(
-                          'Посмотрите, как с ней будут выглядеть ваши чаты'),
+                      _outgoingBubble(l.apprPreviewOutgoing),
                       const SizedBox(height: 6),
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -185,7 +189,7 @@ class _ChatPreview extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                _bubble('Меняйте тему в любое время',
+                _bubble(l.apprPreviewIncoming2,
                     incoming: true, scheme: scheme),
               ],
             ),

@@ -3,6 +3,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// Экран «Язык приложения». Язык следует за системным (как в официальном
 /// приложении): показываем текущий язык устройства и предлагаем сменить его
 /// в системных настройках. Кнопка открывает страницу приложения в «Настройках».
@@ -41,9 +43,10 @@ class LanguageScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l = L.of(context);
     final cur = _current();
     return Scaffold(
-      appBar: AppBar(title: const Text('Язык приложения')),
+      appBar: AppBar(title: Text(l.langTitle)),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -58,14 +61,13 @@ class LanguageScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Изменить можно в системных настройках — найдите там '
-                '«Язык» и выберите нужный',
+                l.langHintSystem,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: scheme.onSurfaceVariant, height: 1.4),
               ),
               const SizedBox(height: 20),
               Text(
-                'Язык изменится только на этом устройстве',
+                l.langHintDevice,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: scheme.onSurfaceVariant, height: 1.4),
               ),
@@ -85,8 +87,9 @@ class LanguageScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: const Text('Изменить в настройках',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              child: Text(l.langOpenSettings,
+                  style:
+                      const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             ),
           ),
         ),

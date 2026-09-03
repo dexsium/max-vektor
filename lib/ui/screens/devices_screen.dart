@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import 'qr_login_scanner_screen.dart';
 
@@ -83,11 +84,10 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
   bool _isOnline(Map<String, dynamic> s) =>
       s['online'] == true || s['isOnline'] == true;
 
-  /// Заголовок: тип устройства (IOS/ANDROID/WEB) + «(текущая)».
+  /// Тип устройства (IOS/ANDROID/WEB). Суффикс «(текущая)» добавляется в UI.
   String _title(Map<String, dynamic> s) {
-    var head = (s['deviceType'] ?? s['type'])?.toString();
-    if (head == null || head.isEmpty) head = 'Устройство';
-    return _isCurrent(s) ? '$head (текущая)' : head;
+    final head = (s['deviceType'] ?? s['type'])?.toString();
+    return (head == null || head.isEmpty) ? 'Device' : head;
   }
 
   /// Подзаголовок: модель, версия ОС/приложения, страна, регион, IP —
@@ -121,8 +121,8 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
   }
 
   /// Правый статус: «В сети» либо время последней активности.
-  String _statusText(Map<String, dynamic> s) {
-    if (_isOnline(s)) return 'В сети';
+  String _statusText(BuildContext context, Map<String, dynamic> s) {
+    if (_isOnline(s)) return L.of(context).devOnline;
     for (final k in const [
       'time',
       'lastActivityTime',
@@ -153,11 +153,11 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Отмена'),
+            child: Text(L.of(ctx).commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Завершить'),
+            child: Text(L.of(ctx).devTerminate),
           ),
         ],
       ),
@@ -181,11 +181,7 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
   }
 
   Future<void> _closeAllOthers() async {
-    if (!await _confirm(
-      'Завершить все сессии, кроме текущей?',
-      'Все остальные устройства будут отключены от аккаунта. '
-          'Текущее устройство останется в сети.',
-    )) {
+    if (!await _confirm(L.of(context).devTerminateAll, '')) {
       return;
     }
     await _run(
@@ -194,10 +190,7 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
   }
 
   Future<void> _closeOne(int id, String name) async {
-    if (!await _confirm(
-      'Завершить сессию?',
-      'Устройство «$name» будет отключено от аккаунта.',
-    )) {
+    if (!await _confirm('${L.of(context).devTerminate} «$name»', '')) {
       return;
     }
     await _run(
@@ -216,7 +209,7 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
     final others = _sessions.where((s) => !_isCurrent(s)).length;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Устройства'),
+        title: Text(L.of(context).devTitle),
         actions: [
           IconButton(
             onPressed: _busy ? null : _load,
@@ -250,8 +243,9 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
             child: FilledButton.icon(
               onPressed: _busy ? null : _openQrLogin,
               icon: const Icon(Icons.qr_code_scanner),
-              label: const Text('Войти по QR-коду',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              label: Text(L.of(context).devQrLogin,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600)),
               style: FilledButton.styleFrom(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -287,14 +281,14 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
                   size: 34, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 14),
-            Text('Устройства с MAX',
+            Text(L.of(context).devHeaderTitle,
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
                     ?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
             Text(
-              'Входите на новых устройствах\nи управляйте сессиями',
+              L.of(context).devHeaderSub,
               textAlign: TextAlign.center,
               style: TextStyle(color: scheme.onSurfaceVariant),
             ),
@@ -328,7 +322,7 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
               InkWell(
                 onTap: _busy ? null : _closeAllOthers,
                 child: Text(
-                  'Завершить все сессии, кроме текущей',
+                  L.of(context).devTerminateAll,
                   style: TextStyle(
                     color: scheme.error,
                     fontWeight: FontWeight.w600,
@@ -347,7 +341,8 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
     final current = _isCurrent(s);
     final id = _sessionId(s);
     final online = _isOnline(s);
-    final status = _statusText(s);
+    final l = L.of(context);
+    final status = _statusText(context, s);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Column(
@@ -360,9 +355,10 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_title(s),
-                        style:
-                            const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                    Text(
+                        current ? '${_title(s)} (${l.devCurrent})' : _title(s),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 16)),
                     const SizedBox(height: 3),
                     Text(_subtitle(s),
                         style: TextStyle(
@@ -412,7 +408,7 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
                   foregroundColor: scheme.error,
                 ),
                 onPressed: _busy ? null : () => _closeOne(id, _title(s)),
-                child: const Text('Завершить'),
+                child: Text(l.devTerminate),
               ),
             ),
         ],
@@ -428,7 +424,7 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
         children: [
           Icon(Icons.devices_outlined, size: 48, color: scheme.outline),
           const SizedBox(height: 12),
-          const Text('Активных сессий не найдено', textAlign: TextAlign.center),
+          Text(L.of(context).devEmpty, textAlign: TextAlign.center),
         ],
       ),
     );

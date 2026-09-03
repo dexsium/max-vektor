@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/constants.dart';
+import 'l10n/app_localizations.dart';
 import 'state/appearance_controller.dart';
 import 'state/theme_controller.dart';
 import 'ui/screens/splash_screen.dart';
@@ -19,6 +21,21 @@ class MaxVektorApp extends ConsumerWidget {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ref.watch(themeModeProvider),
+      // Локализация: интерфейс следует за системным языком устройства
+      // (как в официальном приложении). Неподдержанный язык → русский.
+      localizationsDelegates: const [
+        L.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: L.supportedLocales,
+      localeResolutionCallback: (locale, supported) {
+        for (final s in supported) {
+          if (s.languageCode == locale?.languageCode) return s;
+        }
+        return const Locale('ru');
+      },
       // Масштаб текста: системный или выбранный на экране «Оформление».
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context)

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
+import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/session_controller.dart';
 import '../../state/theme_controller.dart';
@@ -32,14 +33,15 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final l = L.of(context);
     final versionLabel =
         ref.watch(appVersionLabelProvider).valueOrNull ?? AppMeta.version;
     final mode = ref.watch(themeModeProvider);
     final themeLabel = mode == ThemeMode.light
-        ? 'Светлая'
+        ? l.themeLight
         : mode == ThemeMode.dark
-            ? 'Тёмная'
-            : 'Как в системе';
+            ? l.themeDark
+            : l.themeSystem;
 
     return Scaffold(
       body: SafeArea(
@@ -55,33 +57,33 @@ class SettingsScreen extends ConsumerWidget {
             _Group(children: [
               _Tile(
                 icon: Icons.notifications_none,
-                title: 'Уведомления и звук',
+                title: l.settingsNotifications,
                 onTap: () => _soon(context),
               ),
               _Tile(
                 icon: Icons.lock_outline,
-                title: 'Безопасность',
-                subtitle: 'Двухфакторная защита, сессии',
+                title: l.settingsSecurity,
+                subtitle: l.settingsSecuritySub,
                 onTap: () => _push(context, const SecurityScreen()),
               ),
               _Tile(
                 icon: Icons.devices_outlined,
-                title: 'Устройства',
+                title: l.settingsDevices,
                 onTap: () => _push(context, const DevicesScreen()),
               ),
               _Tile(
                 icon: Icons.chat_bubble_outline,
-                title: 'Сообщения',
+                title: l.settingsMessages,
                 onTap: () => _soon(context),
               ),
               _Tile(
                 icon: Icons.bookmark_border,
-                title: 'Избранное',
+                title: l.settingsFavorites,
                 onTap: () => _soon(context),
               ),
               _Tile(
                 icon: Icons.folder_outlined,
-                title: 'Папки',
+                title: l.settingsFolders,
                 onTap: () => _soon(context),
                 last: true,
               ),
@@ -90,12 +92,12 @@ class SettingsScreen extends ConsumerWidget {
             _Group(children: [
               _Tile(
                 icon: Icons.battery_saver_outlined,
-                title: 'Экономия батареи и сети',
+                title: l.settingsDataSaver,
                 onTap: () => _push(context, const DataSaverScreen()),
               ),
               _Tile(
                 icon: Icons.storage_outlined,
-                title: 'Память',
+                title: l.settingsStorage,
                 onTap: () => _push(context, const StorageScreen()),
                 last: true,
               ),
@@ -104,13 +106,13 @@ class SettingsScreen extends ConsumerWidget {
             _Group(children: [
               _Tile(
                 icon: Icons.palette_outlined,
-                title: 'Оформление',
+                title: l.settingsAppearance,
                 subtitle: themeLabel,
                 onTap: () => _push(context, const AppearanceScreen()),
               ),
               _Tile(
                 icon: Icons.language,
-                title: 'Язык приложения',
+                title: l.settingsLanguage,
                 subtitle: LanguageScreen.currentName(),
                 onTap: () => _push(context, const LanguageScreen()),
                 last: true,
@@ -122,14 +124,14 @@ class SettingsScreen extends ConsumerWidget {
             _Group(children: [
               _Tile(
                 icon: Icons.switch_account_outlined,
-                title: 'Аккаунты',
-                subtitle: 'Переключить · добавить',
+                title: l.settingsAccounts,
+                subtitle: l.settingsAccountsSub,
                 onTap: () => _push(context, const AccountsScreen()),
               ),
               _Tile(
                 icon: Icons.qr_code_scanner,
-                title: 'Вход по QR-коду',
-                subtitle: 'Подтвердить вход другого устройства',
+                title: l.settingsQrLogin,
+                subtitle: l.settingsQrLoginSub,
                 onTap: () => _push(context, const QrLoginScannerScreen()),
                 last: true,
               ),
@@ -138,18 +140,18 @@ class SettingsScreen extends ConsumerWidget {
             _Group(children: [
               _Tile(
                 icon: Icons.help_outline,
-                title: 'Помощь',
+                title: l.settingsHelp,
                 onTap: () => _soon(context),
               ),
               _Tile(
                 icon: Icons.bug_report_outlined,
-                title: 'Диагностика',
-                subtitle: 'Логи соединения — для разбора проблем',
+                title: l.settingsDiagnostics,
+                subtitle: l.settingsDiagnosticsSub,
                 onTap: () => _push(context, const DiagnosticsScreen()),
               ),
               _Tile(
                 icon: Icons.info_outline,
-                title: 'О приложении',
+                title: l.settingsAbout,
                 subtitle: '${AppMeta.name} $versionLabel · ${AppMeta.disclaimer}',
                 onTap: () => _about(context, versionLabel),
                 last: true,
@@ -162,7 +164,7 @@ class SettingsScreen extends ConsumerWidget {
                 height: 50,
                 child: OutlinedButton.icon(
                   icon: Icon(Icons.logout, color: scheme.error),
-                  label: Text('Выйти из аккаунта',
+                  label: Text(l.settingsLogout,
                       style: TextStyle(color: scheme.error)),
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: scheme.error.withValues(alpha: 0.4)),
@@ -186,29 +188,29 @@ class SettingsScreen extends ConsumerWidget {
   void _soon(BuildContext context) => AppSnack.soon(context);
 
   void _about(BuildContext context, String versionLabel) {
+    final l = L.of(context);
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('О приложении'),
+        title: Text(l.settingsAbout),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('${AppMeta.name} $versionLabel'),
             const SizedBox(height: 8),
-            Text('${AppMeta.disclaimer}. Не связан с VK и разработчиками '
-                'официального приложения MAX.'),
+            Text('${AppMeta.disclaimer}. ${l.aboutNotAffiliated}'),
             const SizedBox(height: 8),
             Text('Протокол: app ${MaxProto.appVersion}, '
                 'proto v${MaxProto.protoVersion}'),
             const SizedBox(height: 8),
-            Text('Исходный код:\n${AppMeta.upstreamUrl}'),
+            Text('${l.aboutSourceCode}\n${AppMeta.upstreamUrl}'),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Закрыть'),
+            child: Text(l.commonClose),
           ),
         ],
       ),
@@ -216,23 +218,20 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final l = L.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Выйти?'),
-        content: const Text(
-          'Аккаунт исчезнет из переключателя. Его локальная история, '
-          'скачанные файлы и сохранённый вход будут удалены с устройства. '
-          'Другие аккаунты не затрагиваются.',
-        ),
+        title: Text(l.logoutTitle),
+        content: Text(l.logoutBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Отмена'),
+            child: Text(l.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Выйти'),
+            child: Text(l.commonLogout),
           ),
         ],
       ),
@@ -266,7 +265,7 @@ class _Header extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final name = account.displayName?.isNotEmpty == true
         ? account.displayName!
-        : 'Без имени';
+        : L.of(context).headerNoName;
     final phone = account.phone;
     final initial = name.isNotEmpty ? name.characters.first.toUpperCase() : '?';
 
