@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../state/providers.dart';
+import 'qr_login_scanner_screen.dart';
 
-/// Экран «Устройства и сессии»: список активных входов в аккаунт (op 96
-/// SESSIONS_INFO) с возможностью завершить чужие (op 97 SESSIONS_CLOSE),
-/// как в официальном приложении. Поля ответа извлекаются защитно — точный
-/// формат уточняется по живому логу.
+/// Экран «Устройства»: активные сессии аккаунта (op 96 SESSIONS_INFO) с
+/// возможностью завершить как все чужие (op 97 exceptCurrent), так и каждую
+/// по отдельности. Оформление повторяет официальное приложение: карточка-шапка,
+/// список сессий, «Завершить все…» и кнопка входа по QR.
 class DevicesScreen extends ConsumerStatefulWidget {
   const DevicesScreen({super.key});
 
@@ -20,7 +21,6 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
   bool _busy = false;
   String? _error;
   List<Map<String, dynamic>> _sessions = const [];
-  List<String> _rawKeys = const [];
 
   @override
   void initState() {
@@ -36,9 +36,11 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
     try {
       final res = await ref.read(maxClientProvider).sessionsInfo();
       if (!mounted) return;
+      // Текущая сессия — вперёд.
+      final list = _extractSessions(res)
+        ..sort((a, b) => (_isCurrent(b) ? 1 : 0) - (_isCurrent(a) ? 1 : 0));
       setState(() {
-        _sessions = _extractSessions(res);
-        _rawKeys = res.keys.toList();
+        _sessions = list;
         _loading = false;
       });
     } catch (e) {
@@ -78,23 +80,49 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
     return false;
   }
 
+  bool _isOnline(Map<String, dynamic> s) =>
+      s['online'] == true || s['isOnline'] == true;
+
+  /// Заголовок: тип устройства (IOS/ANDROID/WEB) + «(текущая)».
   String _title(Map<String, dynamic> s) {
-    for (final k in const ['info', 'client', 'deviceName', 'name', 'appName']) {
-      final v = s[k];
-      if (v is String && v.isNotEmpty) return v;
-    }
-    return 'Устройство';
+    var head = (s['deviceType'] ?? s['type'])?.toString();
+    if (head == null || head.isEmpty) head = 'Устройство';
+    return _isCurrent(s) ? '$head (текущая)' : head;
   }
 
-  String? _subtitle(Map<String, dynamic> s) {
+  /// Подзаголовок: модель, версия ОС/приложения, страна, регион, IP —
+  /// как в официальном приложении (склеиваем присутствующие поля).
+  String _subtitle(Map<String, dynamic> s) {
     final parts = <String>[];
-    final client = s['client'];
-    // info уже в заголовке; в подзаголовок — клиент (если отличается), локация, время.
-    if (client is String && client.isNotEmpty && client != _title(s)) {
-      parts.add(client);
+    void add(Object? v) {
+      final str = v?.toString().trim();
+      if (str != null && str.isNotEmpty) parts.add(str);
     }
+
+    add(s['deviceName']);
+    add(s['osVersion'] ?? s['appVersion']);
+
+    String? country, region;
     final loc = s['location'];
-    if (loc is String && loc.isNotEmpty) parts.add(loc);
+    if (loc is Map) {
+      final lm = loc.map((k, v) => MapEntry(k.toString(), v));
+      country = lm['country']?.toString();
+      region = (lm['region'] ?? lm['regionName'] ?? lm['city'])?.toString();
+    }
+    country ??= s['country']?.toString();
+    region ??= (s['region'] ?? s['city'])?.toString();
+    add(country);
+    add(region);
+
+    final ip = (s['ip'] ?? s['ipAddress'] ?? s['remoteIp'])?.toString();
+    if (ip != null && ip.isNotEmpty) parts.add('IP $ip');
+
+    return parts.join(', ');
+  }
+
+  /// Правый статус: «В сети» либо время последней активности.
+  String _statusText(Map<String, dynamic> s) {
+    if (_isOnline(s)) return 'В сети';
     for (final k in const [
       'time',
       'lastActivityTime',
@@ -104,13 +132,16 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
     ]) {
       final v = s[k];
       if (v is num && v > 1000000000000) {
-        parts.add(DateFormat('dd.MM.yyyy HH:mm').format(
-          DateTime.fromMillisecondsSinceEpoch(v.toInt()),
-        ));
-        break;
+        final dt = DateTime.fromMillisecondsSinceEpoch(v.toInt());
+        final now = DateTime.now();
+        final sameDay =
+            dt.year == now.year && dt.month == now.month && dt.day == now.day;
+        return sameDay
+            ? DateFormat.Hm().format(dt)
+            : DateFormat('dd.MM.yy').format(dt);
       }
     }
-    return parts.isEmpty ? null : parts.join('\n');
+    return '';
   }
 
   Future<bool> _confirm(String title, String body) async {
@@ -151,7 +182,7 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
 
   Future<void> _closeAllOthers() async {
     if (!await _confirm(
-      'Завершить все, кроме текущей?',
+      'Завершить все сессии, кроме текущей?',
       'Все остальные устройства будут отключены от аккаунта. '
           'Текущее устройство останется в сети.',
     )) {
@@ -163,7 +194,10 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
   }
 
   Future<void> _closeOne(int id, String name) async {
-    if (!await _confirm('Завершить сессию?', 'Устройство «$name» будет отключено.')) {
+    if (!await _confirm(
+      'Завершить сессию?',
+      'Устройство «$name» будет отключено от аккаунта.',
+    )) {
       return;
     }
     await _run(
@@ -171,13 +205,18 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
     );
   }
 
+  void _openQrLogin() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const QrLoginScannerScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final others = _sessions.where((s) => !_isCurrent(s)).length;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Устройства и сессии'),
+        title: const Text('Устройства'),
         actions: [
           IconButton(
             onPressed: _busy ? null : _load,
@@ -192,69 +231,204 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     children: [
-                      if (others > 0)
-                        Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: FilledButton.tonalIcon(
-                            onPressed: _busy ? null : _closeAllOthers,
-                            icon: const Icon(Icons.logout),
-                            style: FilledButton.styleFrom(
-                              foregroundColor: scheme.error,
-                            ),
-                            label: const Text('Завершить все, кроме текущей'),
-                          ),
-                        ),
-                      if (_sessions.isEmpty) _emptyView(),
-                      ..._sessions.map(_sessionTile),
+                      _headerCard(),
+                      const SizedBox(height: 12),
+                      if (_sessions.isEmpty)
+                        _emptyView()
+                      else
+                        _sessionsCard(others),
                     ],
                   ),
                 ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            height: 52,
+            child: FilledButton.icon(
+              onPressed: _busy ? null : _openQrLogin,
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text('Войти по QR-коду',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _sessionTile(Map<String, dynamic> s) {
+  Widget _headerCard() {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.devices_other,
+                  size: 34, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 14),
+            Text('Устройства с MAX',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            Text(
+              'Входите на новых устройствах\nи управляйте сессиями',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sessionsCard(int others) {
+    final scheme = Theme.of(context).colorScheme;
+    final rows = <Widget>[];
+    for (var i = 0; i < _sessions.length; i++) {
+      if (i > 0) rows.add(const SizedBox(height: 4));
+      rows.add(_sessionRow(_sessions[i]));
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ...rows,
+            if (others > 0) ...[
+              const SizedBox(height: 14),
+              InkWell(
+                onTap: _busy ? null : _closeAllOthers,
+                child: Text(
+                  'Завершить все сессии, кроме текущей',
+                  style: TextStyle(
+                    color: scheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sessionRow(Map<String, dynamic> s) {
+    final scheme = Theme.of(context).colorScheme;
     final current = _isCurrent(s);
     final id = _sessionId(s);
-    final scheme = Theme.of(context).colorScheme;
-    return ListTile(
-      isThreeLine: _subtitle(s)?.contains('\n') ?? false,
-      leading: Icon(current ? Icons.smartphone : Icons.devices_other),
-      title: Text(_title(s)),
-      subtitle: _subtitle(s) == null ? null : Text(_subtitle(s)!),
-      trailing: current
-          ? Chip(
-              label: const Text('текущая'),
-              backgroundColor: scheme.primaryContainer,
-              visualDensity: VisualDensity.compact,
-            )
-          : (id == null
-              ? null
-              : IconButton(
-                  tooltip: 'Завершить',
-                  icon: Icon(Icons.close, color: scheme.error),
-                  onPressed: _busy ? null : () => _closeOne(id, _title(s)),
-                )),
+    final online = _isOnline(s);
+    final status = _statusText(s);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_title(s),
+                        style:
+                            const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                    const SizedBox(height: 3),
+                    Text(_subtitle(s),
+                        style: TextStyle(
+                            color: scheme.onSurfaceVariant, fontSize: 13)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (status.isNotEmpty)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (online) ...[
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF34C759),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                    ],
+                    Text(
+                      status,
+                      style: TextStyle(
+                        color: online
+                            ? const Color(0xFF34C759)
+                            : scheme.onSurfaceVariant,
+                        fontWeight:
+                            online ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+          // Индивидуальное завершение сессии (кроме текущей).
+          if (!current && id != null)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  foregroundColor: scheme.error,
+                ),
+                onPressed: _busy ? null : () => _closeOne(id, _title(s)),
+                child: const Text('Завершить'),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
   Widget _emptyView() {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          const Icon(Icons.devices_outlined, size: 48, color: Colors.black38),
+          Icon(Icons.devices_outlined, size: 48, color: scheme.outline),
           const SizedBox(height: 12),
-          const Text(
-            'Сессии не распознаны.',
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Сервер вернул поля: ${_rawKeys.join(', ')}',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Theme.of(context).colorScheme.outline),
-          ),
+          const Text('Активных сессий не найдено', textAlign: TextAlign.center),
         ],
       ),
     );
