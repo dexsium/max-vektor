@@ -1,8 +1,8 @@
-// Maxim CLI — консольный клиент MAX-мессенджера.
+// Max Vektor CLI — консольный клиент MAX-мессенджера.
 //
 // Использует тот же MaxClient, что и Flutter-приложение. Работает на
 // Windows/Linux/macOS без графики, без Android-/Windows-toolchain.
-// Сборка: `dart compile exe bin/maxim_cli.dart -o maxim_cli.exe`.
+// Сборка: `dart compile exe bin/max_vektor_cli.dart -o max_vektor_cli.exe`.
 
 import 'dart:async';
 import 'dart:convert';
@@ -10,13 +10,13 @@ import 'dart:io';
 
 import 'package:logger/logger.dart';
 
-import 'package:maxim_messenger/core/constants.dart';
-import 'package:maxim_messenger/core/errors.dart';
-import 'package:maxim_messenger/data/max/max_client.dart';
-import 'package:maxim_messenger/data/max/models/incoming_message.dart';
+import 'package:max_vektor/core/constants.dart';
+import 'package:max_vektor/core/errors.dart';
+import 'package:max_vektor/data/max/max_client.dart';
+import 'package:max_vektor/data/max/models/incoming_message.dart';
 
 Future<void> main(List<String> argv) async {
-  stdout.writeln('=== Maxim CLI (proto v${MaxProto.protoVersion}, '
+  stdout.writeln('=== Max Vektor CLI (proto v${MaxProto.protoVersion}, '
       'app ${MaxProto.appVersion}) ===');
 
   if (argv.contains('--version') || argv.contains('-v')) {

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:maxim_messenger/data/max/models/attach.dart';
-import 'package:maxim_messenger/data/max/models/message.dart';
+import 'package:max_vektor/data/max/models/attach.dart';
+import 'package:max_vektor/data/max/models/message.dart';
 
 void main() {
   group('MaxMessage editedAt roundtrip', () {

@@ -45,6 +45,8 @@ class ChatsRepository {
           title: c.title ?? existing.title,
           avatarUrl: c.avatarUrl ?? existing.avatarUrl,
           isGroup: c.isGroup,
+          kind: c.kind == MaxChatKind.unknown ? existing.kind : c.kind,
+          membersCount: c.membersCount ?? existing.membersCount,
           serverChatId: c.serverChatId ?? existing.serverChatId,
         ));
       }
@@ -79,31 +81,51 @@ class ChatsRepository {
 
   Future<void> markRead(int chatId) => db.resetUnread(chatId);
 
+  /// Сохранить/обновить группы и каналы, пришедшие в синке чатов (op 19).
+  ///
+  /// Диалоги 1:1 сюда НЕ попадают намеренно: их локальная строка может быть
+  /// заведена по userId собеседника (открытие из контактов), и вслепую
+  /// добавлять вторую строку с серверным chatId — значит плодить дубли.
+  /// Диалог обновляем только если он уже сопоставлен с серверным chatId.
+  Future<void> ingestServerChats(List<dynamic> raw) async {
+    for (final item in raw) {
+      if (item is! Map) continue;
+      final parsed = parseServerChat(item);
+      if (parsed == null) continue;
+
+      final existing = await db.chatByServerId(parsed.serverChatId!);
+      if (existing == null) {
+        // Новую строку заводим только для групп и каналов.
+        if (!parsed.isMultiUser) continue;
+        await db.upsertChat(parsed);
+        continue;
+      }
+      await db.upsertChat(existing.copyWith(
+        title: parsed.title ?? existing.title,
+        avatarUrl: parsed.avatarUrl ?? existing.avatarUrl,
+        isGroup: parsed.isGroup || existing.isGroup,
+        kind: parsed.kind == MaxChatKind.unknown ? existing.kind : parsed.kind,
+        membersCount: parsed.membersCount ?? existing.membersCount,
+        // Превью двигаем только вперёд по времени: локальный push может
+        // быть свежее синка.
+        lastMessageTimeMs:
+            (parsed.lastMessageTimeMs ?? 0) > (existing.lastMessageTimeMs ?? 0)
+                ? parsed.lastMessageTimeMs
+                : existing.lastMessageTimeMs,
+        lastMessagePreview:
+            (parsed.lastMessageTimeMs ?? 0) > (existing.lastMessageTimeMs ?? 0)
+                ? (parsed.lastMessagePreview ?? existing.lastMessagePreview)
+                : existing.lastMessagePreview,
+      ));
+    }
+  }
+
   static List<MaxChat> _extractChats(Map<String, dynamic> info) {
     Object? arr = info['chats'] ?? info['items'] ?? info['result'];
     if (arr is! List) return const [];
     return arr
         .whereType<Map>()
-        .map((m) {
-          final mm = m.map((k, v) => MapEntry(k.toString(), v));
-          final id = mm['id'];
-          if (id is! num) return null;
-          final isGroup = mm['type']?.toString().toLowerCase().contains(
-                    'group',
-                  ) ==
-                  true ||
-              (mm['membersCount'] is num &&
-                  (mm['membersCount'] as num).toInt() > 2);
-          return MaxChat(
-            id: id.toInt(),
-            title: mm['title']?.toString() ?? mm['name']?.toString(),
-            avatarUrl: mm['avatar']?.toString() ?? mm['photo']?.toString(),
-            isGroup: isGroup,
-            // Запись из серверного списка чатов — её id уже серверный,
-            // маршрут отправки = chatId (а не userId).
-            serverChatId: id.toInt(),
-          );
-        })
+        .map(parseServerChat)
         .whereType<MaxChat>()
         .toList();
   }

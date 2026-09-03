@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 
+import '../core/logging.dart';
 import '../data/local/database.dart';
 import '../data/local/secure_storage.dart';
 import '../data/max/device_profile.dart';
@@ -13,7 +14,7 @@ import '../data/repositories/messages_repository.dart';
 import '../data/repositories/upload_repository.dart';
 
 final loggerProvider = Provider<Logger>((ref) {
-  return Logger(printer: PrettyPrinter(methodCount: 0));
+  return buildAppLogger();
 });
 
 final secureStorageProvider = Provider<SecureStorage>((ref) {

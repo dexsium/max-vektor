@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:maxim_messenger/data/max/models/attach.dart';
-import 'package:maxim_messenger/data/max/models/upload_input.dart';
+import 'package:max_vektor/data/max/models/attach.dart';
+import 'package:max_vektor/data/max/models/upload_input.dart';
 
 void main() {
   group('UploadInput.fromPath', () {

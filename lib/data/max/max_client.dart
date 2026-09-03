@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/constants.dart';
 import '../../core/errors.dart';
+import '../../core/logging.dart';
 import 'contact_name.dart';
 import 'lz4_block.dart';
 import 'max_codec.dart';
@@ -84,7 +85,7 @@ class MaxClient {
       try {
         loaded = await deviceIdLoader!();
       } catch (e) {
-        _log.w('deviceIdLoader failed, fallback to ephemeral: $e');
+        _log.w('${MvTag.init} deviceIdLoader failed, fallback to ephemeral: $e');
       }
     }
     final resolved = (loaded != null && loaded.isNotEmpty)
@@ -125,6 +126,10 @@ class MaxClient {
   /// бы веб-токен с login.cred).
   Future<void> connect({String? deviceType}) async {
     if (deviceType != null) _deviceType = deviceType;
+    _log.i(
+      '${MvTag.socket} connect → ${MaxProto.host}:${MaxProto.port} '
+      '(deviceType=$_deviceType)',
+    );
     _emitState(MaxConnectionState.connecting);
     try {
       final s = await _openSecureSocket();
@@ -177,7 +182,7 @@ class MaxClient {
       if (!isDnsFail) rethrow;
       final ip = _dohIp ?? await _resolveViaDoh(MaxProto.host);
       if (ip == null) {
-        _log.w('DoH-фолбэк не дал IP для ${MaxProto.host}');
+        _log.w('${MvTag.socket} DoH-фолбэк не дал IP для ${MaxProto.host}');
         rethrow;
       }
       _dohIp = ip;
@@ -191,7 +196,7 @@ class MaxClient {
         // host: задаёт SNI и имя для проверки сертификата — коннект по IP,
         // но TLS валидируется против api.oneme.ru.
         final secure = await SecureSocket.secure(raw, host: MaxProto.host);
-        _log.i('подключение через DoH-IP $ip (системный DNS молчит)');
+        _log.i('${MvTag.socket} подключение через DoH-IP $ip (системный DNS молчит)');
         return secure;
       } catch (_) {
         _dohIp = null; // IP протух/неверный — сбросим кэш
@@ -225,7 +230,7 @@ class MaxClient {
             }
           }
         } catch (e) {
-          _log.d('DoH $resolver: $e');
+          _log.d('${MvTag.socket} DoH $resolver: $e');
         }
       }
     } finally {
@@ -268,13 +273,20 @@ class MaxClient {
   Future<void> _initSession() async {
     final deviceId = await _resolveDeviceId();
     final userAgent = await _resolveUserAgent();
+    _log.i(
+      '${MvTag.init} INIT deviceType=$_deviceType '
+      'appVersion=${MaxProto.appVersion} proto=v${MaxProto.protoVersion} '
+      'deviceId=${mvRedact(deviceId)}',
+    );
     final f = await _request(MaxOp.init, {
       'userAgent': userAgent,
       'deviceId': deviceId,
     });
     if (f.cmd != 1) {
+      _log.w('${MvTag.init} INIT отвергнут сервером cmd=${f.cmd}');
       throw MaxError('INIT failed cmd=${f.cmd}');
     }
+    _log.i('${MvTag.init} INIT принят');
   }
 
   /// Минимальный userAgent — проверен рабочим python-клиентом, используется
@@ -293,7 +305,7 @@ class MaxClient {
       if (ua.isEmpty) return _minimalUserAgent();
       return ua;
     } catch (e) {
-      _log.w('userAgentLoader failed, fallback to minimal: $e');
+      _log.w('${MvTag.init} userAgentLoader failed, fallback to minimal: $e');
       return _minimalUserAgent();
     }
   }
@@ -378,6 +390,12 @@ class MaxClient {
   /// пропущен на обрыве: на каждом reconnect LOGIN отдаёт свежий lastMessage.
   Stream<List<dynamic>> get syncedChatsStream => _syncedChats.stream;
 
+  List<dynamic>? _lastSyncedChats;
+
+  /// Последний снапшот списка чатов из ответа LOGIN (op 19). Нужен тем,
+  /// кто подписался на [syncedChatsStream] уже после входа.
+  List<dynamic>? get lastSyncedChats => _lastSyncedChats;
+
   Future<Uint8List> login(String token) async {
     final f = await _request(MaxOp.login, {
       'token': token,
@@ -400,8 +418,12 @@ class MaxClient {
     final dec = f.decoded;
     if (dec is Map) {
       final chats = dec['chats'];
-      if (chats is List && chats.isNotEmpty && _syncedChats.hasListener) {
-        _syncedChats.add(chats);
+      if (chats is List && chats.isNotEmpty) {
+        // Кэшируем снапшот: подписчик (список чатов) может быть построен
+        // ПОСЛЕ логина и иначе пропустил бы единственную выдачу.
+        _lastSyncedChats = chats;
+        _log.i('${MvTag.chat} синк чатов из LOGIN: ${chats.length}');
+        if (_syncedChats.hasListener) _syncedChats.add(chats);
       }
     }
     return f.body;
@@ -432,7 +454,7 @@ class MaxClient {
       );
     } catch (e) {
       // Реальный дроп/таймаут обработают onError/onDone → reconnect.
-      _log.d('keepalive ping failed: $e');
+      _log.d('${MvTag.socket} keepalive ping failed: $e');
     }
   }
 
@@ -568,7 +590,7 @@ class MaxClient {
     final f = await _request(MaxOp.sessionsInfo, const <String, Object?>{});
     if (f.cmd != 1) throw MaxError('sessionsInfo cmd=${f.cmd}');
     final m = _asMap(f.decoded);
-    _log.i('sessionsInfo ключи=${m.keys.toList()}');
+    _log.i('${MvTag.socket} sessionsInfo ключи=${m.keys.toList()}');
     return m;
   }
 
@@ -724,7 +746,7 @@ class MaxClient {
     final frame = MaxCodec.frame(seq: seq, opcode: opcode, payload: payload);
     // Маскируем чувствительные поля в логе.
     _log.i(
-      'REQ op=$opcode seq=$seq payload=${_redact(payload)}',
+      '${MvTag.socket} REQ op=$opcode seq=$seq payload=${_redact(payload)}',
     );
     s.add(frame);
     await s.flush();
@@ -736,7 +758,7 @@ class MaxClient {
       },
     );
     _log.i(
-      'RESP op=$opcode seq=$seq cmd=${f.cmd} len=${f.body.length} '
+      '${MvTag.socket} RESP op=$opcode seq=$seq cmd=${f.cmd} len=${f.body.length} '
       'decoded=${_redact(f.decoded)}',
     );
     return f;
@@ -771,13 +793,13 @@ class MaxClient {
   Uint8List _decompressBody(int cof, int payloadLen, Uint8List body) {
     if (cof == 0 || body.isEmpty) return body;
     if (cof == 0xFF) {
-      _log.w('zstd-кадр (cof=0xFF) не распакован — нет нативного zstd');
+      _log.w('${MvTag.socket} zstd-кадр (cof=0xFF) не распакован — нет нативного zstd');
       return body;
     }
     try {
       return Lz4Block.decompress(body, payloadLen * cof);
     } catch (e) {
-      _log.w('LZ4 decompress failed (cof=$cof len=$payloadLen): $e');
+      _log.w('${MvTag.socket} LZ4 decompress failed (cof=$cof len=$payloadLen): $e');
       return body;
     }
   }
@@ -835,7 +857,7 @@ class MaxClient {
       // Диагностика приёма: логируем КАЖДЫЙ серверный push-кадр (несматченный
       // по seq), чтобы видеть, доставляет ли сервер входящие по сокету.
       _log.i(
-        'PUSH cmd=${frame.cmd} op=${frame.opcode} len=${frame.body.length} '
+        '${MvTag.message} PUSH cmd=${frame.cmd} op=${frame.opcode} len=${frame.body.length} '
         'decoded=${_redact(frame.decoded)}',
       );
       onPushDebug?.call(frame);
@@ -847,13 +869,13 @@ class MaxClient {
   }
 
   void _onError(Object e, StackTrace st) {
-    _log.w('MaxClient socket error: $e');
+    _log.w('${MvTag.socket} socket error: $e');
     _failAllPending(MaxNotConnected('socket error: $e'));
     _handleDrop();
   }
 
   void _onDone() {
-    _log.w('MaxClient socket closed by server');
+    _log.w('${MvTag.socket} socket closed by server');
     _failAllPending(const MaxNotConnected('socket closed'));
     _handleDrop();
   }
@@ -1114,7 +1136,7 @@ class _ReconnectManager {
       attemptsInWindow: _attempts.length,
     );
     _log.i(
-      'reconnect через ${delay.inSeconds}s (попытка $_attempt, '
+      '${MvTag.socket} reconnect через ${delay.inSeconds}s (попытка $_attempt, '
       'в окне ${_attempts.length}, с LOGIN ${_client.sinceLastLogin.inSeconds}s)',
     );
     _timer = Timer(delay, _tryReconnect);
@@ -1131,11 +1153,11 @@ class _ReconnectManager {
       // частота re-auth, а не неудачные коннекты к недоступному серверу).
       // Иначе на лежащей сети 6 неудач → 8 мин офлайна без причины.
       _attempts.add(_clock.elapsed);
-      _log.i('reconnect succeeded');
+      _log.i('${MvTag.socket} reconnect succeeded');
       _attempt = 0;
       _running = false;
     } catch (e) {
-      _log.w('reconnect attempt failed: $e');
+      _log.w('${MvTag.socket} reconnect attempt failed: $e');
       // Токен мёртв (FAIL_LOGIN_TOKEN / login.cred / login.token) — нет смысла
       // долбить сервер протухшим токеном. Останавливаем цикл, чистим токен и
       // сигналим, чтобы UI вышел на экран входа.

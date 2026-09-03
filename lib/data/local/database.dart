@@ -21,7 +21,7 @@ class AppDatabase {
     final path = p.join(dir.path, AppMeta.dbName);
     final db = await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -85,6 +85,12 @@ class AppDatabase {
         'CREATE INDEX IF NOT EXISTS idx_chats_server ON chats(server_chat_id)',
       );
     }
+    if (oldVersion < 8) {
+      // Точный тип чата с сервера (DIALOG/CHAT/CHANNEL) и число участников —
+      // булева is_group не хватало, чтобы отличить канал от группы.
+      await db.execute('ALTER TABLE chats ADD COLUMN chat_kind TEXT');
+      await db.execute('ALTER TABLE chats ADD COLUMN members_count INTEGER');
+    }
   }
 
   static Future<void> _createAttachmentsTable(Database db) async {
@@ -130,6 +136,8 @@ class AppDatabase {
         title TEXT,
         avatar_url TEXT,
         is_group INTEGER NOT NULL DEFAULT 0,
+        chat_kind TEXT,
+        members_count INTEGER,
         last_message_time_ms INTEGER,
         last_message_preview TEXT,
         unread_count INTEGER NOT NULL DEFAULT 0,

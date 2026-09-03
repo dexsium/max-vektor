@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:maxim_messenger/core/errors.dart';
+import 'package:max_vektor/core/errors.dart';
 
 /// Логика, которая чинит «вечный долбёж» outbox и не теряет сообщения на
 /// throttle: permanent-отказы дропаем, транзиентные/незнакомые — повторяем.

@@ -1,7 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/constants.dart';
 import '../../data/max/models/chat.dart';
 import '../../state/chats_controller.dart';
 import '../theme/app_theme.dart';
@@ -31,7 +33,7 @@ class _ChatsListScreenState extends ConsumerState<ChatsListScreen> {
     final chatsAsync = ref.watch(chatsListProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Maxim'),
+        title: const Text(AppMeta.name),
         actions: [
           IconButton(
             tooltip: 'Архив',
@@ -152,6 +154,13 @@ class _ChatTile extends ConsumerWidget {
     final initials = (chat.title?.isNotEmpty ?? false)
         ? chat.title!.characters.first.toUpperCase()
         : '?';
+    // Канал и группа получают собственный значок — иначе в списке они
+    // неотличимы от обычного диалога.
+    final kindIcon = switch (chat.kind) {
+      MaxChatKind.channel => Icons.campaign_outlined,
+      MaxChatKind.group => Icons.groups_outlined,
+      _ => chat.isGroup ? Icons.groups_outlined : null,
+    };
     return InkWell(
       onLongPress: () => _showActions(context, ref, chat),
       onTap: () async {
@@ -172,13 +181,22 @@ class _ChatTile extends ConsumerWidget {
               radius: 26,
               backgroundColor: _avatarColor(chat.id, scheme),
               foregroundColor: Colors.white,
-              child: Text(
-                initials,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              // Аватар чата, если сервер прислал ссылку; иначе — иконка
+              // типа (группа/канал) или первая буква названия.
+              backgroundImage: (chat.avatarUrl?.isNotEmpty ?? false)
+                  ? CachedNetworkImageProvider(chat.avatarUrl!)
+                  : null,
+              child: (chat.avatarUrl?.isNotEmpty ?? false)
+                  ? null
+                  : (kindIcon != null
+                      ? Icon(kindIcon, size: 26, color: Colors.white)
+                      : Text(
+                          initials,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        )),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -187,9 +205,17 @@ class _ChatTile extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
+                      if (kindIcon != null) ...[
+                        Icon(
+                          kindIcon,
+                          size: 15,
+                          color: MaxColors.textSecondaryLight,
+                        ),
+                        const SizedBox(width: 4),
+                      ],
                       Expanded(
                         child: Text(
-                          chat.title ?? 'Чат ${chat.id}',
+                          chat.title ?? '${chat.kind.label} ${chat.id}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(

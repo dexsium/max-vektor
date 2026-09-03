@@ -47,15 +47,32 @@ class MaxOp {
 }
 
 class AppMeta {
-  static const String name = 'Maxim';
-  static const String dbName = 'maxim.db';
-  static const String secureTokenKey = 'max_auth_token';
-  static const String prefMyUserIdKey = 'my_max_user_id';
-  static const String tokenKindKey = 'max_token_kind';
+  static const String name = 'Max Vektor';
+
+  /// Явная дисклеймер-строка для экрана «О приложении».
+  static const String disclaimer = 'Unofficial MAX client';
+
+  /// Версия приложения (держать синхронно с pubspec.yaml `version:`).
+  static const String version = '0.1.17';
+
+  /// Апстрим, из которого форкнут клиент.
+  static const String upstreamUrl =
+      'https://github.com/sansmaster1982/maxim-messenger';
+
+  /// Собственная БД Max Vektor. Namespace отделён от апстрима, чтобы
+  /// данные не пересекались ни с оригинальным форком, ни с официальным MAX.
+  static const String dbName = 'max_vektor.db';
+
+  /// Ключи secure storage с префиксом `mv_`: Keychain и так изолирован
+  /// bundle id (ru.vektor.max), но собственный namespace исключает любое
+  /// случайное пересечение при общем keychain access group.
+  static const String secureTokenKey = 'mv_max_auth_token';
+  static const String prefMyUserIdKey = 'mv_my_max_user_id';
+  static const String tokenKindKey = 'mv_max_token_kind';
 
   /// Стабильный идентификатор устройства. Генерируется один раз и хранится
   /// в secure storage. Переживает logout/login (это физически то же
   /// устройство), переустановку — нет. Регенерация при каждом запуске
   /// выглядит для антифрода MAX как поток новых устройств на одном номере.
-  static const String deviceIdKey = 'max_device_id';
+  static const String deviceIdKey = 'mv_max_device_id';
 }

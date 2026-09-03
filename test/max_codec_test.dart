@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:maxim_messenger/data/max/max_codec.dart';
+import 'package:max_vektor/data/max/max_codec.dart';
 
 void main() {
   test('frame layout: proto, cmd, seq, opcode, length', () {

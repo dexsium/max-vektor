@@ -14,10 +14,20 @@ class SettingsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Настройки')),
       body: ListView(
         children: [
-          ListTile(
-            title: const Text('Версия приложения'),
-            subtitle: const Text('${AppMeta.name} 0.1.0'),
-            leading: const Icon(Icons.info_outline),
+          const ListTile(
+            title: Text('О приложении'),
+            subtitle: Text(
+              '${AppMeta.name} ${AppMeta.version}\n'
+              '${AppMeta.disclaimer} — неофициальный клиент MAX.\n'
+              'Не связан с VK и разработчиками официального приложения MAX.',
+            ),
+            isThreeLine: true,
+            leading: Icon(Icons.info_outline),
+          ),
+          const ListTile(
+            title: Text('Исходный код (upstream)'),
+            subtitle: Text(AppMeta.upstreamUrl),
+            leading: Icon(Icons.code),
           ),
           ListTile(
             title: const Text('Версия протокола MAX'),

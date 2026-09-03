@@ -11,14 +11,30 @@ import 'providers.dart';
 /// Поток списка чатов, перерисовывается при любом изменении.
 class ChatsListController extends AsyncNotifier<List<MaxChat>> {
   StreamSubscription? _sub;
+  StreamSubscription? _syncSub;
 
   @override
   Future<List<MaxChat>> build() async {
     final repo = await ref.watch(chatsRepositoryProvider.future);
     final msgRepo = await ref.watch(messagesRepositoryProvider.future);
+    final client = ref.watch(maxClientProvider);
     _sub?.cancel();
     _sub = msgRepo.changedChats.listen((_) => _reload());
-    ref.onDispose(() => _sub?.cancel());
+
+    // Группы и каналы приходят списком в ответе LOGIN (op 19) — без этого
+    // они не появлялись в списке, пока в них не придёт новое сообщение.
+    _syncSub?.cancel();
+    _syncSub = client.syncedChatsStream.listen((chats) async {
+      await repo.ingestServerChats(chats);
+      await _reload();
+    });
+    ref.onDispose(() {
+      _sub?.cancel();
+      _syncSub?.cancel();
+    });
+
+    final cached = client.lastSyncedChats;
+    if (cached != null) await repo.ingestServerChats(cached);
     return repo.listLocal();
   }
 
@@ -58,6 +74,59 @@ final chatsListProvider =
     AsyncNotifierProvider<ChatsListController, List<MaxChat>>(
   ChatsListController.new,
 );
+
+/// Строка чата по локальному id — нужна экрану чата, чтобы понимать,
+/// группа это/канал (тогда рисуем имя отправителя) или диалог 1:1.
+final chatByIdProvider = FutureProvider.family<MaxChat?, int>((ref, id) async {
+  // Пересчитывается вместе со списком: после синка чатов тип и название
+  // приходят с сервера.
+  ref.watch(chatsListProvider);
+  final repo = await ref.read(chatsRepositoryProvider.future);
+  return repo.get(id);
+});
+
+/// Имена отправителей для группы/канала: userId → отображаемое имя.
+///
+/// Сначала берём то, что уже лежит локально в contacts, затем ОДНИМ
+/// запросом CONTACT_INFO (op 32) добираем недостающих. Массовых
+/// перечислений не делаем — только id, реально встреченные в истории
+/// этого чата.
+final chatSenderNamesProvider =
+    FutureProvider.family<Map<int, String>, int>((ref, chatId) async {
+  final messages = await ref.watch(chatHistoryProvider(chatId).future);
+  final db = await ref.read(appDatabaseProvider.future);
+  final ids = <int>{
+    for (final m in messages)
+      if (m.senderId != null) m.senderId!,
+  };
+  if (ids.isEmpty) return const {};
+
+  final out = <int, String>{};
+  final missing = <int>[];
+  for (final id in ids) {
+    final c = await db.contact(id);
+    final name = c?.name;
+    if (name != null && name.isNotEmpty) {
+      out[id] = name;
+    } else {
+      missing.add(id);
+    }
+  }
+  if (missing.isNotEmpty) {
+    try {
+      final contacts = await ref.read(contactsRepositoryProvider.future);
+      await contacts.refresh(missing);
+      for (final id in missing) {
+        final c = await db.contact(id);
+        final name = c?.name;
+        if (name != null && name.isNotEmpty) out[id] = name;
+      }
+    } catch (_) {
+      // Оффлайн или сервер не отдал — покажем «Участник N».
+    }
+  }
+  return out;
+});
 
 /// Подсказка «этот chatId — диалог 1:1 с этим peerUserId», выставляется
 /// навигацией (ContactsScreen._openChat) ДО построения ChatHistoryController.

@@ -11,6 +11,7 @@ class MessageBubble extends StatelessWidget {
     this.onRetry,
     this.chatId,
     this.messageServerId,
+    this.senderLabel,
   });
   final MaxMessage message;
 
@@ -24,6 +25,10 @@ class MessageBubble extends StatelessWidget {
   /// Серверный id сообщения для download endpoint. Если null, attach
   /// без локального пути не сможет начать скачиваться.
   final int? messageServerId;
+
+  /// Имя отправителя. Заполняется только в группах и каналах — в диалоге
+  /// 1:1 подпись избыточна.
+  final String? senderLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +66,18 @@ class MessageBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Кто написал — только для входящих в группах/каналах.
+            if (!isOut && (senderLabel?.isNotEmpty ?? false)) ...[
+              Text(
+                senderLabel!,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.primary,
+                ),
+              ),
+              const SizedBox(height: 2),
+            ],
             if (hasReply) _replyBlock(fg),
             if (message.attaches.isNotEmpty) _attachList(),
             if (message.text.isNotEmpty) ...[

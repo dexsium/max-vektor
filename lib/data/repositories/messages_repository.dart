@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/errors.dart';
+import '../../core/logging.dart';
 import '../local/database.dart';
 import '../local/secure_storage.dart';
 import '../max/max_client.dart';
@@ -51,7 +52,7 @@ class MessagesRepository {
 
   Future<void> start() async {
     _pushSub ??= client.incomingStream.listen(_onPush, onError: (e) {
-      _log.w('push stream error: $e');
+      _log.w('${MvTag.message} push stream error: $e');
     });
     // Подписываемся на состояние транспорта — при выходе в connected
     // дренируем outbox. Установка подписки не блокирует репозиторий.
@@ -65,7 +66,7 @@ class MessagesRepository {
     // (op 128) был пропущен на обрыве, lastMessage с вложением долетит здесь.
     _syncSub ??= client.syncedChatsStream.listen(
       (chats) => unawaited(_ingestSyncedChats(chats)),
-      onError: (e) => _log.w('synced chats stream error: $e'),
+      onError: (e) => _log.w('${MvTag.chat} synced chats stream error: $e'),
     );
     // Если на момент start транспорт уже connected — дренаж тоже отложенный.
     if (client.currentState == MaxConnectionState.connected) {
@@ -332,13 +333,13 @@ class MessagesRepository {
     } on MaxRejected catch (e) {
       // permanent (user.not.found и т.п.) → rejected, не повторяем;
       // транзиентный (throttle/flood) → failed, можно повторить руками.
-      _log.w('sendText rejected: $e');
+      _log.w('${MvTag.message} sendText отклонён сервером: $e');
       final st = e.isPermanent ? MessageStatus.rejected : MessageStatus.failed;
       await db.updateMessageByLocalId(localId, status: st);
       _onChat.add(chatId);
       return pending.copyWith(status: st);
     } catch (e) {
-      _log.w('sendText failed: $e');
+      _log.w('${MvTag.message} sendText failed: $e');
       await db.updateMessageByLocalId(localId, status: MessageStatus.failed);
       _onChat.add(chatId);
       return pending.copyWith(status: MessageStatus.failed);
@@ -567,9 +568,9 @@ class MessagesRepository {
         return null;
       }
 
-      // Готовим путь в getApplicationDocumentsDirectory()/maxim_media.
+      // Готовим путь в getApplicationDocumentsDirectory()/max_vektor_media.
       final docs = await getApplicationDocumentsDirectory();
-      final mediaDir = Directory(p.join(docs.path, 'maxim_media'));
+      final mediaDir = Directory(p.join(docs.path, 'max_vektor_media'));
       if (!await mediaDir.exists()) {
         await mediaDir.create(recursive: true);
       }

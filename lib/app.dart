@@ -5,8 +5,8 @@ import 'core/constants.dart';
 import 'ui/screens/splash_screen.dart';
 import 'ui/theme/app_theme.dart';
 
-class MaximApp extends ConsumerWidget {
-  const MaximApp({super.key});
+class MaxVektorApp extends ConsumerWidget {
+  const MaxVektorApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

@@ -15,7 +15,7 @@ Future<void> main() async {
   await initializeDateFormatting('ru_RU', null);
   await initializeDateFormatting('ru', null);
   Intl.defaultLocale = 'ru_RU';
-  runApp(const ProviderScope(child: MaximApp()));
+  runApp(const ProviderScope(child: MaxVektorApp()));
 }
 
 /// На Windows/Linux/macOS — sqflite через FFI. На Android/iOS — нативный.

@@ -43,6 +43,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.dispose();
   }
 
+  /// Подпись отправителя для входящего сообщения в группе/канале.
+  /// В диалоге 1:1 возвращает null — там подпись не нужна.
+  String? _senderLabel(MaxMessage m) {
+    if (!_isMultiUserChat) return null;
+    if (m.direction == MessageDirection.outgoing) return null;
+    final id = m.senderId;
+    if (id == null) return null;
+    final names = ref
+        .watch(chatSenderNamesProvider(widget.chatId))
+        .maybeWhen(data: (v) => v, orElse: () => const <int, String>{});
+    return names[id] ?? 'Участник $id';
+  }
+
+  /// Подзаголовок шапки: для группы/канала — тип и число участников,
+  /// для диалога — прежний статус присутствия.
+  String _headerSubtitle() {
+    final chat = ref
+        .watch(chatByIdProvider(widget.chatId))
+        .maybeWhen(data: (c) => c, orElse: () => null);
+    if (chat == null || !chat.isMultiUser) return 'был(а) недавно';
+    final n = chat.membersCount;
+    return n == null ? chat.kind.label : '${chat.kind.label} · $n участн.';
+  }
+
+  bool get _isMultiUserChat =>
+      ref
+          .watch(chatByIdProvider(widget.chatId))
+          .maybeWhen(data: (c) => c?.isMultiUser, orElse: () => false) ??
+      false;
+
   void _onScroll() {
     if (!_scroll.hasClients) return;
     // Близко к самому верху (где сидят самые старые) — догружаем.
@@ -244,7 +274,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        'был(а) недавно',
+                        _headerSubtitle(),
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context)
@@ -396,6 +426,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 message: m,
                 chatId: widget.chatId,
                 messageServerId: m.id,
+                senderLabel: _senderLabel(m),
                 onRetry: m.status == MessageStatus.failed
                     ? () => ref
                         .read(chatHistoryProvider(widget.chatId).notifier)

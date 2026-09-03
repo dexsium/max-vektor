@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:maxim_messenger/data/max/max_client.dart';
+import 'package:max_vektor/data/max/max_client.dart';
 
 void main() {
   test('MaxConnectionState enum values and transitions', () {

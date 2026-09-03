@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:maxim_messenger/data/max/lz4_block.dart';
+import 'package:max_vektor/data/max/lz4_block.dart';
 
 void main() {
   test('LZ4 block decompress matches reference vector', () {

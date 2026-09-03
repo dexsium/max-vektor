@@ -2,7 +2,7 @@
 setlocal
 
 echo ===============================================
-echo   Maxim - build debug APK for Android
+echo   Max Vektor - build debug APK for Android
 echo ===============================================
 echo.
 

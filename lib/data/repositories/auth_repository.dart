@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:logger/logger.dart';
 
 import '../../core/errors.dart';
+import '../../core/logging.dart';
 import '../local/secure_storage.dart';
 import '../max/max_client.dart';
 
@@ -26,12 +27,16 @@ class AuthRepository {
   /// deviceType берём из сохранённого kind — веб-токен требует WEB.
   Future<bool> tryRestoreSession() async {
     final saved = await storage.readToken();
-    if (saved == null) return false;
+    if (saved == null) {
+      _log.i('${MvTag.auth} сохранённой сессии нет — нужен вход');
+      return false;
+    }
     final kind = await storage.readTokenKind() ?? 'android';
     final deviceType = kind == 'web' ? 'WEB' : 'ANDROID';
     try {
       if (!client.isConnected) await client.connect(deviceType: deviceType);
       await client.login(saved);
+      _log.i('${MvTag.auth} сессия восстановлена (deviceType=$deviceType)');
       try {
         final me = await client.currentProfile();
         final id = me['id'];
@@ -39,7 +44,7 @@ class AuthRepository {
       } catch (_) {}
       return true;
     } catch (e) {
-      _log.w('tryRestoreSession failed: $e');
+      _log.w('${MvTag.auth} восстановление сессии не удалось: $e');
       await storage.deleteToken();
       return false;
     }
@@ -60,11 +65,12 @@ class AuthRepository {
       final id = me['id'];
       if (id is int) await storage.writeMyUserId(id);
     } catch (e) {
-      _log.w('profile load failed after token login: $e');
+      _log.w('${MvTag.auth} профиль не загрузился после входа по токену: $e');
     }
   }
 
   Future<void> requestSms(String phone) async {
+    _log.i('${MvTag.auth} запрос SMS-кода для номера ***${_tail(phone)}');
     // SMS-флоу — всегда ANDROID. Если до этого было WEB-соединение
     // (вход по токену), закрываем его и поднимаем чистое ANDROID, иначе
     // _deviceType остался бы WEB и сервер обработал бы запрос иначе.
@@ -131,11 +137,14 @@ class AuthRepository {
         await client.connect(deviceType: 'ANDROID');
       }
     }
+    _log.i('${MvTag.auth} отправка SMS-кода на проверку');
     final r = await client.confirmSms(vt, code);
     if (r.authToken != null) {
+      _log.i('${MvTag.auth} код принят, сессия выдана');
       await _completeLogin(r.authToken!);
       return AuthState.authenticated;
     }
+    _log.i('${MvTag.auth} требуется 2FA-пароль');
     _trackId = r.trackId;
     return AuthState.awaiting2fa;
   }
@@ -149,6 +158,7 @@ class AuthRepository {
   Future<void> submit2fa(String password) async {
     final t = _trackId;
     if (t == null) throw StateError('2FA-челлендж отсутствует');
+    _log.i('${MvTag.auth} отправка 2FA-пароля');
     final token = await _withFreshConnection(
       () => client.confirm2fa(t, password),
     );
@@ -156,11 +166,19 @@ class AuthRepository {
   }
 
   Future<void> logout() async {
+    _log.i('${MvTag.auth} logout: чистим токен и рвём соединение');
     await storage.wipe();
     await client.close();
   }
 
+  /// Последние 4 цифры номера для лога. Полный номер в лог не пишем.
+  static String _tail(String phone) {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    return digits.length <= 4 ? '' : digits.substring(digits.length - 4);
+  }
+
   Future<void> _completeLogin(String token) async {
+    _log.i('${MvTag.auth} вход завершён, токен ${mvRedact(token)} сохранён');
     await storage.writeToken(token);
     await storage.writeTokenKind('android');
     await client.login(token);
@@ -169,7 +187,7 @@ class AuthRepository {
       final id = me['id'];
       if (id is int) await storage.writeMyUserId(id);
     } catch (e) {
-      _log.w('profile load failed: $e');
+      _log.w('${MvTag.auth} профиль не загрузился: $e');
     }
   }
 }

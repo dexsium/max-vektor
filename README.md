@@ -1,4 +1,211 @@
-# Maxim — кросс-платформенный клиент MAX
+# Max Vektor — неофициальный iOS/Android-клиент MAX
+
+> **Unofficial MAX client.** Проект не связан с VK и разработчиками
+> официального приложения MAX. Название, иконка и Bundle Identifier —
+> собственные; официальный логотип и брендинг MAX не используются.
+
+Форк [sansmaster1982/maxim-messenger](https://github.com/sansmaster1982/maxim-messenger),
+переименованный и переконфигурированный так, чтобы приложение ставилось на
+iPhone **рядом** с официальным MAX и не пересекалось с ним ни Bundle ID, ни
+Keychain, ни локальными данными.
+
+| Параметр | Значение |
+|---|---|
+| Отображаемое имя | `Max Vektor` |
+| iOS Bundle Identifier | `ru.vektor.max` |
+| iOS тесты | `ru.vektor.max.RunnerTests` |
+| Android applicationId | `ru.vektor.max` |
+| Dart-пакет | `max_vektor` |
+| Минимальный iOS | 13.0 |
+| Локальная БД | `max_vektor.db` |
+| Ключи Keychain | префикс `mv_` |
+| Upstream | https://github.com/sansmaster1982/maxim-messenger |
+
+Bundle Identifier лежит в `ios/Runner.xcodeproj/project.pbxproj`
+(`PRODUCT_BUNDLE_IDENTIFIER`, четыре вхождения: Debug/Release/Profile у
+`Runner` и конфигурации `RunnerTests`). Отображаемое имя —
+`ios/Runner/Info.plist`, ключи `CFBundleDisplayName` и `CFBundleName`.
+
+## Установка на iPhone
+
+Финальная компиляция iOS возможна **только на macOS с Xcode** — это
+требование Apple, а не проекта. На Windows/Linux можно править код,
+гонять `flutter analyze` и `flutter test`, но не собрать `.app`/`.ipa`.
+
+### 1. Flutter
+
+```bash
+# macOS
+git clone -b stable https://github.com/flutter/flutter.git ~/flutter
+export PATH="$HOME/flutter/bin:$PATH"
+flutter --version      # нужен Flutter 3.29+ / Dart 3.7+
+flutter doctor
+```
+
+Xcode ставится из App Store, после установки:
+
+```bash
+sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+sudo xcodebuild -runFirstLaunch
+```
+
+### 2. Зависимости проекта
+
+```bash
+git clone <этот-репозиторий> max-vektor
+cd max-vektor
+flutter pub get
+```
+
+### 3. CocoaPods
+
+```bash
+sudo gem install cocoapods      # если ещё не стоит
+cd ios
+pod install                     # при ошибке: pod install --repo-update
+cd ..
+```
+
+`ios/Podfile` фиксирует `platform :ios, '13.0'` и приводит все поды к тому же
+минимальному таргету — иначе часть плагинов (`flutter_secure_storage`,
+`permission_handler`, `file_picker`) не собирается.
+
+### 4. Открыть проект
+
+```bash
+open ios/Runner.xcworkspace
+```
+
+Именно `.xcworkspace`, а не `.xcodeproj` — иначе поды не подключатся.
+
+### 5. Выбрать свою Apple Developer Team
+
+В Xcode: target **Runner** → вкладка **Signing & Capabilities**:
+
+1. включить **Automatically manage signing**;
+2. в поле **Team** выбрать свою учётку (подойдёт и бесплатный Personal Team);
+3. **Bundle Identifier** оставить `ru.vektor.max`. Если Xcode скажет, что
+   идентификатор занят, поменять на `com.vektor.maxclient` (и точно так же
+   заменить суффикс у `RunnerTests`).
+
+В репозитории намеренно **нет** ни `DEVELOPMENT_TEAM`, ни сертификатов, ни
+provisioning profile — Team подставляет тот, кто собирает.
+
+### 6. Поставить на устройство
+
+```bash
+flutter devices
+flutter run --release -d <id-вашего-iPhone>
+```
+
+На iPhone первый запуск потребует: **Настройки → Основные → VPN и управление
+устройством → доверять разработчику**.
+
+Сборка без установки:
+
+```bash
+flutter build ios --release
+```
+
+### 7. Archive и .ipa
+
+Через Xcode: **Product → Destination → Any iOS Device**, затем
+**Product → Archive**, далее в Organizer — **Distribute App**.
+
+Через Flutter:
+
+```bash
+flutter build ipa
+```
+
+Готовый архив: `build/ios/archive/Runner.xcarchive`,
+экспортированный `.ipa`: `build/ios/ipa/`.
+
+Подпись выполняется вашим сертификатом. Сертификаты не подделываются и
+code signing не обходится — при отсутствии сертификата используйте
+`flutter build ios --release --no-codesign` и подписывайте архив
+самостоятельно.
+
+## Совместная установка с официальным MAX
+
+Max Vektor и официальный MAX — два независимых для iOS приложения:
+
+- разные Bundle ID (`ru.vektor.max` против идентификатора официального
+  приложения — он не используется нигде в проекте);
+- у Max Vektor нет файла entitlements: не объявлены ни App Groups, ни
+  Keychain Access Groups, ни associated domains, ни push-entitlement —
+  пересекаться нечему;
+- URL schemes не регистрируются (`CFBundleURLTypes` в `Info.plist`
+  отсутствует);
+- Keychain изолирован Bundle ID, а ключи дополнительно имеют префикс `mv_`;
+- SQLite-база называется `max_vektor.db` и лежит в песочнице Max Vektor;
+- медиа складываются в `Documents/max_vektor_media`.
+
+Данные, токены и сессии официального приложения не читаются и не
+используются: вход выполняется штатно внутри Max Vektor (номер → SMS → при
+включённом пароле 2FA), токен сохраняется в свой Keychain через
+`flutter_secure_storage` и восстанавливается при следующем запуске.
+
+## Что уже работает
+
+Всё, что было в upstream: авторизация (SMS + 2FA), восстановление сессии,
+профиль, список чатов, история, приём и отправка текста, вложения, поиск
+контакта по номеру, устройства и сессии, logout.
+
+Добавлено в этом форке:
+
+- **группы и каналы** больше не выглядят как обычный чат: тип чата
+  (`DIALOG` / `CHAT` / `GROUP_CHAT` / `CHANNEL`) читается из ответа сервера,
+  сохраняется в БД (миграция схемы до v8) и показывается в UI — отдельная
+  иконка группы и канала в списке, тип и число участников в шапке чата,
+  имя отправителя над входящим сообщением;
+- группы и каналы **появляются в списке сразу после входа**: раньше список
+  чатов из ответа `LOGIN` (op 19) использовался только для восстановления
+  медиа, и чат без новых сообщений в списке не возникал;
+- аватар чата из ответа сервера показывается в списке;
+- единый логгер с тегами `[MaxVektor][AUTH]`, `[SOCKET]`, `[INIT]`, `[CHAT]`,
+  `[MESSAGE]`, `[ERROR]`; в release остаются только warning и выше. Токены,
+  SMS-коды и пароль 2FA в лог не попадают (`mvRedact`).
+
+Ограничения доступа не обходятся: видно ровно то, что сервер MAX отдаёт
+вашей собственной авторизованной учётной записи.
+
+## Обновление из upstream
+
+```bash
+git remote add upstream https://github.com/sansmaster1982/maxim-messenger.git
+git fetch upstream
+git checkout max-vektor-ios
+git merge upstream/main        # или upstream/master — как называется ветка
+```
+
+Конфликты ожидаемы в `pubspec.yaml`, `lib/core/constants.dart`,
+`ios/Runner/Info.plist`, `ios/Runner.xcodeproj/project.pbxproj` и
+`android/app/build.gradle.kts` — это ровно те файлы, где заданы имя и
+идентификаторы. Оставляйте свои значения (`Max Vektor`, `ru.vektor.max`),
+код протокола берите из upstream.
+
+## Проверка
+
+```bash
+flutter analyze
+flutter test
+flutter build ios --release      # только на macOS
+```
+
+## Иконка
+
+`tool_gen_icon.py` генерирует весь набор иконок (iOS AppIcon asset catalog +
+Android mipmap) — минималистичная «V» на графитовом фоне, без элементов
+брендинга MAX:
+
+```bash
+python tool_gen_icon.py
+```
+
+---
+
+# Апстрим: Maxim — кросс-платформенный клиент MAX
 
 **Поддержи проект:**
 

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:maxim_messenger/core/constants.dart';
-import 'package:maxim_messenger/data/max/device_profile.dart';
+import 'package:max_vektor/core/constants.dart';
+import 'package:max_vektor/data/max/device_profile.dart';
 
 void main() {
   // Нужен для доступа к PlatformDispatcher (поле screen).
