@@ -260,6 +260,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         onSubmitted: _busy ? null : (_) => _submitRegistration(ctrl),
       ),
+      const SizedBox(height: 8),
+      Text(
+        // Сервер MAX проверяет имя: минимум два символа, без цифр, эмодзи
+        // и знаков препинания, плюс фильтр запрещённых слов.
+        'Не короче двух символов, только буквы — без цифр, эмодзи и '
+        'знаков препинания.',
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
       const SizedBox(height: 20),
       _PrimaryButton(
         label: 'Создать аккаунт',
@@ -271,7 +279,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   void _submitRegistration(SessionController ctrl) {
     final first = _firstNameCtrl.text.trim();
-    if (first.isEmpty) return;
+    // Отсекаем заведомо негодное здесь: серверный отказ стоит запроса и
+    // приходит без объяснения, какое поле виновато.
+    if (first.length < 2) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Имя должно быть не короче двух букв')),
+      );
+      return;
+    }
     _run(() => ctrl.submitRegistration(
           firstName: first,
           lastName: _lastNameCtrl.text.trim(),

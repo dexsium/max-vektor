@@ -502,6 +502,34 @@ class MaxClient {
     throw const MaxLoginFailed('no auth token and no 2FA challenge');
   }
 
+  /// Понятное объяснение отказа регистрации по коду ошибки сервера.
+  ///
+  /// Набор кодов — из обработчика ошибок официального веб-клиента:
+  /// `validate.FIELD.{empty,min_length,invalid_chars,
+  /// invalid_complex_chars,censor_restricted}`. Сервер присылает и свой
+  /// localizedMessage, но он часто сводится к «ошибка валидации» и не
+  /// говорит, какое поле виновато.
+  static String? _registerValidationHint(String? code) {
+    if (code == null || !code.startsWith('validate.')) return null;
+    final isLast = code.contains('last_name');
+    final field = isLast ? 'Фамилия' : 'Имя';
+    if (code.endsWith('.empty')) {
+      return '$field не может быть пустым.';
+    }
+    if (code.endsWith('.min_length')) {
+      return '$field слишком короткое — нужно минимум два символа.';
+    }
+    if (code.endsWith('.invalid_chars') ||
+        code.endsWith('.invalid_complex_chars')) {
+      return '$field содержит недопустимые символы. Оставьте только буквы, '
+          'без цифр, эмодзи и знаков препинания.';
+    }
+    if (code.endsWith('.censor_restricted')) {
+      return '$field отклонено фильтром сервера MAX. Попробуйте другое.';
+    }
+    return '$field не прошло проверку сервера ($code).';
+  }
+
   /// `tokenAttrs.REGISTER.token` из ответа на op 18, если он там есть.
   static String? _registerToken(Object? decoded) {
     if (decoded is! Map) return null;
@@ -535,7 +563,16 @@ class MaxClient {
       if (trimmedLast != null && trimmedLast.isNotEmpty)
         'lastName': trimmedLast,
     });
-    if (f.cmd != 1) _failWith(f, 'REGISTER');
+    if (f.cmd != 1) {
+      final r = _rejection(f);
+      _log.w(
+        '${MvTag.auth} регистрация отклонена: cmd=${f.cmd} '
+        'error=${r.code ?? '-'} message=${r.message ?? '-'}',
+      );
+      final hint = _registerValidationHint(r.code);
+      if (hint != null) throw MaxLoginFailed(hint);
+      _failWith(f, 'REGISTER');
+    }
     final authToken = RawParsers.findLongToken(f.body);
     if (authToken == null) {
       throw const MaxLoginFailed(
