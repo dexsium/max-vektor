@@ -8,6 +8,7 @@ import '../../data/max/models/chat.dart';
 import '../../state/chats_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/connection_banner.dart';
+import '../widgets/app_snack.dart';
 import 'accounts_screen.dart';
 import 'chat_screen.dart';
 import 'contacts_screen.dart';
@@ -45,9 +46,7 @@ class _ChatsListScreenState extends ConsumerState<ChatsListScreen> {
           ),
           IconButton(
             tooltip: 'Архив',
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Архив пока пуст')),
-            ),
+            onPressed: () => AppSnack.show(context, 'Архив пока пуст'),
             icon: const Icon(Icons.archive_outlined),
           ),
         ],
