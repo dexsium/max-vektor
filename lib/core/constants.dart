@@ -105,7 +105,7 @@ class AppMeta {
   static const String disclaimer = 'Unofficial MAX client';
 
   /// Версия приложения (держать синхронно с pubspec.yaml `version:`).
-  static const String version = '0.12.1';
+  static const String version = '0.13.0';
 
   /// Апстрим, из которого форкнут клиент.
   static const String upstreamUrl =

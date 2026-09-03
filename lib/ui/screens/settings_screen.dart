@@ -9,6 +9,7 @@ import 'accounts_screen.dart';
 import 'devices_screen.dart';
 import 'appearance_screen.dart';
 import 'data_saver_screen.dart';
+import 'language_screen.dart';
 import 'security_screen.dart';
 import 'storage_screen.dart';
 import 'diagnostics_screen.dart';
@@ -110,8 +111,8 @@ class SettingsScreen extends ConsumerWidget {
               _Tile(
                 icon: Icons.language,
                 title: 'Язык приложения',
-                subtitle: 'Русский',
-                onTap: () => _soon(context),
+                subtitle: LanguageScreen.currentName(),
+                onTap: () => _push(context, const LanguageScreen()),
                 last: true,
               ),
             ]),
