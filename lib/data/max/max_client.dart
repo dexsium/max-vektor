@@ -25,6 +25,20 @@ enum MaxConnectionState { disconnected, connecting, connected, reconnecting }
 /// Один MaxClient = одно TLS-соединение к api.oneme.ru:443 + один читающий
 /// сабскрипшен. Запросы идут через [_request], ответы матчатся по seq.
 /// Сервер-пуш сваливается в [incomingStream].
+/// Значения поля `type` в запросе кода (op 17).
+///
+/// Официальный веб-клиент выбирает их так:
+/// `m.name === 'captcha' ? 'START_AUTH' : 'RESEND'` — то есть обычный
+/// запрос кода уходит как [resend], а [startAuth] используется, когда
+/// пользователь уже прошёл капчу. Апстрим-форк всегда слал [startAuth],
+/// и сервер отвечал успехом, не отправляя код.
+class MaxAuthRequestType {
+  const MaxAuthRequestType._();
+
+  static const String resend = 'RESEND';
+  static const String startAuth = 'START_AUTH';
+}
+
 /// Условия ввода кода подтверждения, присланные сервером вместе с
 /// verify-токеном (ответ на op 17).
 typedef MaxSmsChallenge = ({
@@ -376,13 +390,37 @@ class MaxClient {
   /// Кроме verify-токена сервер сообщает условия ввода: длину кода,
   /// через сколько можно запросить код заново и сколько попыток осталось.
   /// Раньше всё это отбрасывалось, и пользователю нечего было показать.
-  Future<MaxSmsChallenge> startAuthSms(String phone) async {
+  /// Спросить сервер, нужна ли капча перед запросом кода (op 224).
+  ///
+  /// Возвращает ссылку на страницу капчи, если сервер её требует, иначе
+  /// null. Решает капчу ТОЛЬКО человек — приложение её не проходит.
+  Future<String?> captchaSessionLink(String phone) async {
+    final f = await _request(MaxOp.captchaSession, {
+      'source': 'auth',
+      'identifier': phone,
+    });
+    _log.i('${MvTag.auth} captcha session: cmd=${f.cmd} '
+        'decoded=${_redact(f.decoded)}');
+    if (f.cmd != 1) return null;
+    final d = f.decoded;
+    if (d is! Map) return null;
+    final link = d['link'];
+    return (link is String && link.isNotEmpty) ? link : null;
+  }
+
+  Future<MaxSmsChallenge> startAuthSms(
+    String phone, {
+    String type = MaxAuthRequestType.resend,
+    String captchaToken = '',
+  }) async {
     final f = await _request(MaxOp.authRequest, {
       'phone': phone,
-      'type': 'START_AUTH',
-      // Официальный клиент шлёт ещё language (и captchaToken, когда сервер
-      // требует капчу — её мы не проходим и не обходим).
+      'type': type,
       'language': MaxProto.locale,
+      // Официальный веб-клиент передаёт captchaToken всегда: пустую строку,
+      // когда сервер капчу не требует (сейчас он отвечает
+      // `captcha.create-session-failed / Captcha creation disabled`).
+      'captchaToken': captchaToken,
     });
     if (f.cmd != 1) _failWith(f, 'AUTH_REQUEST');
     final t = RawParsers.findLongToken(f.body);
@@ -398,7 +436,11 @@ class MaxClient {
     final challenge = (
       token: t,
       codeLength: intField('codeLength'),
-      resendAfterMs: intField('requestMaxDuration'),
+      // Официальный веб-клиент отсчитывает повтор именно по
+      // altActionDuration (`resendAt: Date.now() + t.altActionDuration`),
+      // requestMaxDuration оставляем запасным вариантом.
+      resendAfterMs:
+          intField('altActionDuration') ?? intField('requestMaxDuration'),
       attemptsLeft: intField('requestCountLeft'),
     );
     _log.i(

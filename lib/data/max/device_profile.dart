@@ -33,6 +33,7 @@ class DeviceProfile {
     var arch = 'arm64-v8a';
     var osVersion = '34';
     var deviceName = 'Android';
+    var realAndroid = false;
     try {
       final info = await DeviceInfoPlugin().androidInfo;
       if (info.supportedAbis.isNotEmpty) {
@@ -43,18 +44,27 @@ class DeviceProfile {
       final model = info.model.trim();
       final name = man.isEmpty ? model : '$man $model';
       if (name.trim().isNotEmpty) deviceName = name.trim();
+      realAndroid = true;
     } catch (_) {
-      // Нет нативного канала (desktop/CLI/тест) — остаются дефолты.
+      // Нет нативного канала (iOS/desktop/CLI/тест) — остаются дефолты.
     }
 
+    // Экран берём с устройства ТОЛЬКО на настоящем Android.
+    //
+    // Иначе получался несуществующий отпечаток: шаблонные Android-поля
+    // (deviceName «Android», sdk 34, arm64-v8a) вперемешку с реальным
+    // разрешением iPhone. Для антифрода такая нестыковка заметнее, чем
+    // ровный типовой профиль, а SMS-вход всегда идёт как ANDROID.
     var screen = '1080x2340';
-    try {
-      final view = ui.PlatformDispatcher.instance.implicitView;
-      final size = view?.physicalSize;
-      if (size != null && size.width > 0 && size.height > 0) {
-        screen = '${size.width.round()}x${size.height.round()}';
-      }
-    } catch (_) {}
+    if (realAndroid) {
+      try {
+        final view = ui.PlatformDispatcher.instance.implicitView;
+        final size = view?.physicalSize;
+        if (size != null && size.width > 0 && size.height > 0) {
+          screen = '${size.width.round()}x${size.height.round()}';
+        }
+      } catch (_) {}
+    }
 
     // Порядок строго как у официального клиента (pushDeviceType — 2-й).
     return {

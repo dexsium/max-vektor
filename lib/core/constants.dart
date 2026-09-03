@@ -45,6 +45,11 @@ class MaxOp {
   /// `{token, tokenType: 'REGISTER', firstName, lastName?, photoId?}`.
   /// Источник: модуль авторизации веб-клиента web.max.ru.
   static const int register = 23;
+
+  /// Создание сессии капчи перед запросом кода:
+  /// `{source: 'auth', identifier: <phone>}` → `{link}`.
+  /// Источник: модуль авторизации веб-клиента web.max.ru.
+  static const int captchaSession = 224;
   static const int contactInfo = 32;
   static const int contactByPhone = 46;
   static const int chatInfo = 48;
