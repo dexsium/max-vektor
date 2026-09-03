@@ -13,11 +13,15 @@ import '../../state/session_controller.dart';
 /// поэтому тап по аккаунту переключает мгновенно и не выполняет повторный
 /// вход (частые LOGIN с одного устройства — сигнал для антифрода MAX).
 class AccountsSection extends ConsumerWidget {
-  const AccountsSection({super.key, this.onSwitched});
+  const AccountsSection({super.key, this.onSwitched, this.showHeader = true});
 
   /// Вызывается после переключения — экрану аккаунтов нужно закрыться,
   /// настройкам достаточно перерисоваться.
   final VoidCallback? onSwitched;
+
+  /// Показывать собственный заголовок «Аккаунты». В настройках секция уже
+  /// обёрнута в группу с заголовком, поэтому там его отключаем.
+  final bool showHeader;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,15 +33,16 @@ class AccountsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: Text(
-            'Аккаунты',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+        if (showHeader)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(
+              'Аккаунты',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+            ),
           ),
-        ),
         for (final account in accounts)
           _AccountTile(
             account: account,
