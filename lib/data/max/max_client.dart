@@ -737,14 +737,16 @@ class MaxClient {
   List<dynamic>? get lastSyncedChats => _lastSyncedChats;
 
   Future<Uint8List> login(String token) async {
-    // Структура payload сверена с официальным APK 26.30 (pj9.java, wkc.LOGIN):
-    // token + interactive + presenceSync=-1 (ВСЕГДА) + вложенный exp{}.
-    // Старый форк слал chatsCount и presenceSync=0 — в новом протоколе это
-    // приводит к `proto.payload` (сервер отвергает LOGIN). Поля *Sync и
-    // configHash официальный клиент добавляет ТОЛЬКО когда они > 0 / непусты;
-    // при первом входе их нет, поэтому не отправляем.
+    // Структура payload: token + userAgent + interactive + presenceSync=-1 +
+    // вложенный exp{}. userAgent ОБЯЗАТЕЛЕН — без него сервер отвечает
+    // `proto.payload: userAgent required` (видно в диагностике), из-за чего
+    // сессия не становилась ONLINE: op 48/83 падали «Must be ONLINE», сокет
+    // рвался (мигание), а восстановление после перезапуска выкидывало на
+    // экран входа. Тот же userAgent, что в INIT (op 6).
+    final userAgent = await _resolveUserAgent();
     final f = await _request(MaxOp.login, {
       'token': token,
+      'userAgent': userAgent,
       'interactive': false,
       'presenceSync': -1,
       'exp': <String, Object?>{},
@@ -1102,6 +1104,18 @@ class MaxClient {
 
   // ───────────────────────── internals ────────────────────────
 
+  /// Очередь записи в сокет: последовательный await-цепочкой, чтобы add()+
+  /// flush() разных запросов не пересекались.
+  Future<void> _writeChain = Future<void>.value();
+
+  Future<void> _enqueueWrite(Future<void> Function() write) {
+    final next = _writeChain.then((_) => write());
+    // Проглатываем ошибку в хвосте цепочки, чтобы один сбой записи не рушил
+    // все последующие; сама ошибка вернётся вызывающему через await next.
+    _writeChain = next.catchError((_) {});
+    return next;
+  }
+
   Future<MaxFrame> _request(
     int opcode,
     Map<String, Object?> payload, {
@@ -1120,8 +1134,13 @@ class MaxClient {
     _log.i(
       '${MvTag.socket} REQ op=$opcode seq=$seq payload=${_redact(payload)}',
     );
-    s.add(frame);
-    await s.flush();
+    // Запись в сокет СЕРИАЛИЗУЕМ: одновременные _request (ping/профиль/чаты
+    // после входа) вызывали add()+flush() параллельно → «Bad state:
+    // StreamSink is bound to a stream». Цепочка гарантирует по одной записи.
+    await _enqueueWrite(() async {
+      s.add(frame);
+      await s.flush();
+    });
     final f = await completer.future.timeout(
       timeout,
       onTimeout: () {

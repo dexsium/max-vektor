@@ -270,16 +270,16 @@ class AuthRepository {
 
   /// Завершение ИНТЕРАКТИВНОГО входа (код, 2FA, регистрация).
   ///
-  /// Сервер уже перевёл сессию в ONLINE и вернул постоянный токен. Второй
-  /// LOGIN (op 19) на этом же сокете он отвергает с `proto.payload`, поэтому
-  /// сессию помечаем вошедшей локально ([MaxClient.markLoggedIn]). op 19 с
-  /// сохранённым токеном уходит уже на СВЕЖЕМ соединении — при
-  /// переподключении и восстановлении сессии после перезапуска.
+  /// Код/2FA (op 18/115) выдают токен, но сессия ещё НЕ «ONLINE»: пока не
+  /// послан LOGIN (op 19), сервер отвечает «Must be ONLINE session» на op 48
+  /// (названия чатов), op 83 (видео) и рвёт сокет через пару секунд. Поэтому
+  /// после токена ОБЯЗАТЕЛЬНО шлём LOGIN (теперь с userAgent — раньше он
+  /// падал с `userAgent required`), и только тогда сессия рабочая.
   Future<void> _completeLogin(String token) async {
     _log.i('${MvTag.auth} вход завершён, токен ${mvRedact(token)} сохранён');
     await storage.writeToken(token);
     await storage.writeTokenKind(_authTokenKind);
-    client.markLoggedIn(token);
+    await client.login(token);
     await _captureProfile();
   }
 
