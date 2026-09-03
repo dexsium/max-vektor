@@ -7,6 +7,7 @@ import '../../state/session_controller.dart';
 import '../../state/theme_controller.dart';
 import 'accounts_screen.dart';
 import 'devices_screen.dart';
+import 'appearance_screen.dart';
 import 'data_saver_screen.dart';
 import 'security_screen.dart';
 import 'storage_screen.dart';
@@ -104,7 +105,7 @@ class SettingsScreen extends ConsumerWidget {
                 icon: Icons.palette_outlined,
                 title: 'Оформление',
                 subtitle: themeLabel,
-                onTap: () => _pickTheme(context, ref),
+                onTap: () => _push(context, const AppearanceScreen()),
               ),
               _Tile(
                 icon: Icons.language,
@@ -182,37 +183,6 @@ class SettingsScreen extends ConsumerWidget {
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
 
   void _soon(BuildContext context) => AppSnack.soon(context);
-
-  Future<void> _pickTheme(BuildContext context, WidgetRef ref) async {
-    final ctrl = ref.read(themeModeProvider.notifier);
-    final current = ref.read(themeModeProvider);
-    await showModalBottomSheet<void>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final entry in const [
-              (ThemeMode.system, 'Как в системе'),
-              (ThemeMode.light, 'Светлая'),
-              (ThemeMode.dark, 'Тёмная'),
-            ])
-              ListTile(
-                title: Text(entry.$2),
-                trailing: current == entry.$1
-                    ? Icon(Icons.check,
-                        color: Theme.of(ctx).colorScheme.primary)
-                    : null,
-                onTap: () {
-                  ctrl.set(entry.$1);
-                  Navigator.of(ctx).pop();
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _about(BuildContext context, String versionLabel) {
     showDialog<void>(

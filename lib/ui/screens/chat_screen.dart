@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/max/models/message.dart';
+import '../../state/appearance_controller.dart';
 import '../../state/chats_controller.dart';
+import '../theme/wallpapers.dart';
 import '../widgets/chat_input.dart';
 import '../widgets/date_divider.dart';
 import '../widgets/app_snack.dart';
@@ -430,8 +432,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       items.add(_ListItem.message(m,
           firstInRun: firstInRun, lastInRun: lastInRun));
     }
-    return Container(
-      color: Theme.of(context).colorScheme.surfaceContainerLowest,
+    return WallpaperBackground(
+      wallpaper: wallpaperById(ref.watch(chatWallpaperProvider)),
       child: ListView.builder(
       controller: _scroll,
       padding: const EdgeInsets.symmetric(vertical: 8),
