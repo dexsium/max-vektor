@@ -57,6 +57,12 @@ class MaxOp {
 
   /// Опрос статуса QR: `{trackId}` → `{status: {loginAvailable, expiresAt}}`.
   static const int qrPoll = 104;
+
+  /// Подтверждение входа по QR со стороны СКАНЕРА (уже залогинен):
+  /// клиент сканирует QR другого устройства и авторизует его вход.
+  /// Опкод из официального APK (wkc.AUTH_QR_APPROVE). Единственный QR-опкод
+  /// мобильного клиента — он только подтверждающий, QR сам не генерирует.
+  static const int qrApprove = 290;
   static const int contactInfo = 32;
   static const int contactByPhone = 46;
   static const int chatInfo = 48;

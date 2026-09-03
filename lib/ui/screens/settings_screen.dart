@@ -7,6 +7,7 @@ import '../../state/session_controller.dart';
 import '../widgets/accounts_section.dart';
 import '../widgets/vektor_mark.dart';
 import 'devices_screen.dart';
+import 'qr_login_scanner_screen.dart';
 
 /// Экран настроек.
 ///
@@ -42,6 +43,17 @@ class SettingsScreen extends ConsumerWidget {
             title: 'Приложение',
             child: Column(
               children: [
+                _Tile(
+                  icon: Icons.qr_code_scanner,
+                  title: 'Вход по QR-коду',
+                  subtitle: 'Сканировать QR входа с другого устройства',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const QrLoginScannerScreen(),
+                    ),
+                  ),
+                ),
+                const _TileDivider(),
                 _Tile(
                   icon: Icons.devices_outlined,
                   title: 'Устройства и сессии',

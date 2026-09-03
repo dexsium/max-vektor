@@ -449,6 +449,25 @@ class MaxClient {
     return d is Map ? d.map((k, v) => MapEntry(k.toString(), v)) : {};
   }
 
+  /// Подтвердить вход по QR (op 290). Вызывается на УЖЕ ЗАЛОГИНЕННОМ
+  /// клиенте: [scanned] — содержимое отсканированного QR (токен/ссылка,
+  /// показанные на web.max.ru или другом устройстве). Сервер авторизует тот
+  /// вход и отвечает статусом/профилем.
+  ///
+  /// ВНИМАНИЕ: точное имя поля payload из обфусцированного APK не
+  /// подтверждено; семейство auth стабильно использует `token`. Полный ответ
+  /// сервера пишется в лог — по первому живому сканированию поле уточняется.
+  Future<Map<String, dynamic>> approveQrLogin(String scanned) async {
+    final value = scanned.trim();
+    _log.i('${MvTag.auth} QR approve: отправляю (${mvRedact(value)})');
+    final f = await _request(MaxOp.qrApprove, {'token': value});
+    _log.i('${MvTag.auth} QR approve ответ: cmd=${f.cmd} '
+        'decoded=${_redact(f.decoded)}');
+    if (f.cmd != 1) _failWith(f, 'QR_APPROVE');
+    final d = f.decoded;
+    return d is Map ? d.map((k, v) => MapEntry(k.toString(), v)) : {};
+  }
+
   Future<MaxSmsChallenge> startAuthSms(
     String phone, {
     String type = MaxAuthRequestType.resend,
