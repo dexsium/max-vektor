@@ -7,6 +7,7 @@ import '../../state/session_controller.dart';
 import '../../state/theme_controller.dart';
 import 'accounts_screen.dart';
 import 'devices_screen.dart';
+import 'diagnostics_screen.dart';
 import 'qr_login_scanner_screen.dart';
 import '../widgets/app_snack.dart';
 
@@ -132,6 +133,12 @@ class SettingsScreen extends ConsumerWidget {
                 icon: Icons.help_outline,
                 title: 'Помощь',
                 onTap: () => _soon(context),
+              ),
+              _Tile(
+                icon: Icons.bug_report_outlined,
+                title: 'Диагностика',
+                subtitle: 'Логи соединения — для разбора проблем',
+                onTap: () => _push(context, const DiagnosticsScreen()),
               ),
               _Tile(
                 icon: Icons.info_outline,

@@ -20,10 +20,34 @@ class MvTag {
   static const String error = '[ERROR]';
 }
 
+/// Кольцевой буфер последних строк лога — для экрана диагностики в
+/// приложении (release-сборку не подключить к Xcode-консоли, поэтому логи
+/// показываем прямо в UI и даём скопировать). Токены/коды сюда не попадают:
+/// они уже замаскированы [mvRedact] на месте вызова.
+class MvLogBuffer {
+  const MvLogBuffer._();
+
+  static const int _cap = 800;
+  static final List<String> _lines = <String>[];
+
+  static void add(String line) {
+    _lines.add(line);
+    if (_lines.length > _cap) _lines.removeRange(0, _lines.length - _cap);
+  }
+
+  /// Все накопленные строки одним текстом (для копирования/отправки).
+  static String dump() => _lines.join('\n');
+
+  static void clear() => _lines.clear();
+
+  static int get length => _lines.length;
+}
+
 /// Принтер с единым префиксом приложения.
 ///
 /// Никаких стектрейсов и рамок — одна строка на событие, чтобы лог
-/// физического устройства читался в Xcode-консоли.
+/// физического устройства читался в Xcode-консоли. Каждая строка также
+/// уходит в [MvLogBuffer] для экрана диагностики.
 class MaxVektorLogPrinter extends LogPrinter {
   @override
   List<String> log(LogEvent event) {
@@ -46,17 +70,21 @@ class MaxVektorLogPrinter extends LogPrinter {
     final severe = event.level.index >= Level.error.index;
     final prefix =
         '[MaxVektor]${severe ? MvTag.error : ''}$domain[$level]';
-    final lines = <String>['$prefix $body'];
-    if (event.error != null) lines.add('$prefix cause: ${event.error}');
+    final ts = DateTime.now().toIso8601String().substring(11, 19);
+    final lines = <String>['$ts $prefix $body'];
+    if (event.error != null) lines.add('$ts $prefix cause: ${event.error}');
+    for (final l in lines) {
+      MvLogBuffer.add(l);
+    }
     return lines;
   }
 }
 
-/// В release оставляем только warning и выше: подробная трассировка
-/// соединения и чатов нужна лишь в debug.
+/// В release пропускаем info и выше (не trace/debug): нужно для экрана
+/// диагностики — трассировка соединения и чатов идёт на уровне info.
 class _ReleaseFilter extends LogFilter {
   @override
-  bool shouldLog(LogEvent event) => event.level.index >= Level.warning.index;
+  bool shouldLog(LogEvent event) => event.level.index >= Level.info.index;
 }
 
 /// Единая фабрика логгера приложения.

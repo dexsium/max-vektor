@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/max/models/attach.dart';
+import '../../state/providers.dart';
 import '../screens/video_player_screen.dart';
 import 'app_snack.dart';
 import '../../state/chats_controller.dart';
@@ -181,24 +182,46 @@ class _AttachPreviewState extends ConsumerState<AttachPreview> {
     return _placeholder();
   }
 
+  /// Открыть видео. Прямая ссылка (videoUrl) лежит в downloadUrl. Если её
+  /// нет — запрашиваем поток через VIDEO_PLAY (op 83) по videoId (fileId).
+  Future<void> _openVideo(BuildContext context) async {
+    var url = attach.downloadUrl ?? attach.localPath;
+
+    if ((url == null || url.isEmpty) && attach.fileId != null) {
+      try {
+        final resp = await ref.read(maxClientProvider).requestVideoPlay(
+              videoId: attach.fileId!,
+              chatId: chatId,
+              messageId: messageServerId,
+              token: attach.token,
+            );
+        url = resp['videoUrl']?.toString() ??
+            resp['url']?.toString() ??
+            resp['embedUrl']?.toString();
+      } catch (e) {
+        if (context.mounted) {
+          AppSnack.show(context, 'Не удалось получить видео: $e', error: true);
+        }
+        return;
+      }
+    }
+
+    if (url == null || url.isEmpty) {
+      if (context.mounted) {
+        AppSnack.show(context, 'Ссылка на видео недоступна');
+      }
+      return;
+    }
+    if (context.mounted) {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => VideoPlayerScreen(url: url!),
+      ));
+    }
+  }
+
   Widget _buildVideo(BuildContext context, ColorScheme scheme) {
     return InkWell(
-      onTap: () async {
-        // Прямая ссылка на поток лежит в downloadUrl (videoUrl из attach).
-        // Если сервер её не дал — пробуем скачать файл и открыть локально.
-        final url = attach.downloadUrl ?? attach.localPath;
-        if (url == null || url.isEmpty) {
-          if (context.mounted) {
-            AppSnack.show(context, 'Ссылка на видео недоступна');
-          }
-          return;
-        }
-        if (context.mounted) {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => VideoPlayerScreen(url: url),
-          ));
-        }
-      },
+      onTap: () => _openVideo(context),
       child: Stack(
         alignment: Alignment.center,
         children: [
