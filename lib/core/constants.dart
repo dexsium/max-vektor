@@ -44,6 +44,11 @@ class MaxOp {
   static const int authConfirm = 18;
   static const int login = 19;
 
+  /// CONFIG (op 22): пользовательские настройки приватности —
+  /// {settings: {user: {app.privacy.*: ALL|CONTACTS|NOBODY}}}.
+  /// Источник: web.max.ru (send 22 {settings:{user}}) + APK (izi.java).
+  static const int config = 22;
+
   /// Завершение регистрации нового аккаунта:
   /// `{token, tokenType: 'REGISTER', firstName, lastName?, photoId?}`.
   /// Источник: модуль авторизации веб-клиента web.max.ru.
@@ -100,7 +105,7 @@ class AppMeta {
   static const String disclaimer = 'Unofficial MAX client';
 
   /// Версия приложения (держать синхронно с pubspec.yaml `version:`).
-  static const String version = '0.3.0';
+  static const String version = '0.4.0';
 
   /// Апстрим, из которого форкнут клиент.
   static const String upstreamUrl =

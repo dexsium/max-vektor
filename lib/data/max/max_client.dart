@@ -961,6 +961,20 @@ class MaxClient {
     return _asMap(f.decoded);
   }
 
+  /// Записать пользовательские настройки приватности (op 22 CONFIG).
+  /// [settings] — карта ключ→значение (app.privacy.*: ALL|CONTACTS|NOBODY).
+  /// Возвращает обновлённый config сервера.
+  Future<Map<String, dynamic>> setUserSettings(
+      Map<String, Object?> settings) async {
+    final f = await _request(MaxOp.config, {
+      'settings': {'user': settings},
+    });
+    _log.i('${MvTag.auth} CONFIG set → cmd=${f.cmd} '
+        'decoded=${_redact(f.decoded)}');
+    if (f.cmd != 1) _failWith(f, 'CONFIG');
+    return _asMap(f.decoded);
+  }
+
   Future<Map<String, dynamic>> requestPhotoUpload({
     int count = 1,
     bool profile = false,

@@ -7,6 +7,7 @@ import '../../state/session_controller.dart';
 import '../../state/theme_controller.dart';
 import 'accounts_screen.dart';
 import 'devices_screen.dart';
+import 'security_screen.dart';
 import 'diagnostics_screen.dart';
 import 'profile_edit_screen.dart';
 import 'qr_login_scanner_screen.dart';
@@ -57,7 +58,7 @@ class SettingsScreen extends ConsumerWidget {
                 icon: Icons.lock_outline,
                 title: 'Безопасность',
                 subtitle: 'Двухфакторная защита, сессии',
-                onTap: () => _push(context, const DevicesScreen()),
+                onTap: () => _push(context, const SecurityScreen()),
               ),
               _Tile(
                 icon: Icons.devices_outlined,
