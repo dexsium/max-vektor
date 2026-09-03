@@ -1,0 +1,67 @@
+name: iOS unsigned IPA
+
+# Собирает Max Vektor на macOS-раннере GitHub и отдаёт НЕПОДПИСАННЫЙ .ipa
+# артефактом. Подпись выполняется владельцем сборки самостоятельно —
+# своим сертификатом (Xcode, AltStore, Sideloadly). Секреты, сертификаты
+# и provisioning profile здесь не используются и не нужны.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [max-vektor-ios]
+
+jobs:
+  checks:
+    name: analyze + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  ipa:
+    name: build unsigned .ipa
+    needs: checks
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: pod install
+        working-directory: ios
+        run: pod install --repo-update
+
+      - name: build (no codesign)
+        run: flutter build ios --release --no-codesign
+
+      - name: package Payload -> .ipa
+        run: |
+          set -euo pipefail
+          APP="build/ios/iphoneos/Runner.app"
+          test -d "$APP" || { echo "::error::$APP не собран"; exit 1; }
+          rm -rf build/ipa && mkdir -p build/ipa/Payload
+          cp -R "$APP" build/ipa/Payload/
+          cd build/ipa
+          zip -qry max-vektor-unsigned.ipa Payload
+          ls -lh max-vektor-unsigned.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: max-vektor-unsigned-ipa
+          path: build/ipa/max-vektor-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 30

@@ -127,6 +127,21 @@ code signing не обходится — при отсутствии серти�
 `flutter build ios --release --no-codesign` и подписывайте архив
 самостоятельно.
 
+### Сборка .ipa без своего Mac
+
+В репозитории лежит workflow `.github/workflows/ios-unsigned-ipa.yml`: он
+собирает проект на macOS-раннере GitHub Actions и отдаёт **неподписанный**
+`.ipa` артефактом.
+
+1. Actions → **iOS unsigned IPA** → *Run workflow* (или просто пуш в ветку
+   `max-vektor-ios`).
+2. Скачать артефакт `max-vektor-unsigned-ipa`.
+3. Подписать своим сертификатом — Xcode, AltStore или Sideloadly — и
+   поставить на iPhone.
+
+Никакие сертификаты, ключи и provisioning profile в workflow не
+загружаются: подпись целиком остаётся на стороне владельца устройства.
+
 ## Совместная установка с официальным MAX
 
 Max Vektor и официальный MAX — два независимых для iOS приложения:
