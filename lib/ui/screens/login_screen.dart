@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
+import '../../core/countries.dart';
 import '../../state/providers.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../state/session_controller.dart';
@@ -34,8 +35,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _pwVisible = false;
   bool _tokenMode = false;
 
+  /// Выбранная страна для кода телефона. По умолчанию — регион устройства
+  /// (как в официальном приложении, o2j.z), обычно Россия (+7).
+  late Country _country = defaultCountry();
+
   /// Тикает раз в секунду, пока идёт отсчёт до повторного запроса кода.
   Timer? _resendTicker;
+
+  /// Полный номер в E.164: «+<код страны><цифры без кода>».
+  String _fullPhone() {
+    final digits = _phoneCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
+    return '+${_country.dialCode}$digits';
+  }
 
   @override
   void dispose() {
@@ -196,27 +207,70 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   List<Widget> _phoneStep(SessionController ctrl) {
+    final scheme = Theme.of(context).colorScheme;
     return [
-      TextField(
-        controller: _phoneCtrl,
-        keyboardType: TextInputType.phone,
-        autofillHints: const [AutofillHints.telephoneNumber],
-        decoration: const InputDecoration(
-          labelText: 'Номер телефона',
-          hintText: '+79991234567',
-          prefixIcon: Icon(Icons.phone_outlined),
-        ),
-        onSubmitted: _busy
-            ? null
-            : (_) => _run(() => ctrl.requestSms(_phoneCtrl.text.trim())),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Селектор кода страны — тап открывает список.
+          InkWell(
+            onTap: _busy ? null : _pickCountry,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              height: 56,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_country.flag, style: const TextStyle(fontSize: 22)),
+                  const SizedBox(width: 6),
+                  Text('+${_country.dialCode}',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600)),
+                  Icon(Icons.arrow_drop_down, color: scheme.onSurfaceVariant),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _phoneCtrl,
+              keyboardType: TextInputType.phone,
+              autofillHints: const [AutofillHints.telephoneNumber],
+              decoration: const InputDecoration(
+                labelText: 'Номер телефона',
+                hintText: '999 123-45-67',
+              ),
+              onSubmitted: _busy
+                  ? null
+                  : (_) => _run(() => ctrl.requestSms(_fullPhone())),
+            ),
+          ),
+        ],
       ),
       const SizedBox(height: 20),
       _PrimaryButton(
         label: 'Получить код',
         busy: _busy,
-        onPressed: () => _run(() => ctrl.requestSms(_phoneCtrl.text.trim())),
+        onPressed: () => _run(() => ctrl.requestSms(_fullPhone())),
       ),
     ];
+  }
+
+  /// Список стран с поиском. Выбор подставляет код в селектор.
+  Future<void> _pickCountry() async {
+    final chosen = await showModalBottomSheet<Country>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => _CountryPicker(selected: _country),
+    );
+    if (chosen != null && mounted) setState(() => _country = chosen);
   }
 
   List<Widget> _codeStep(SessionState session, SessionController ctrl) {
@@ -443,6 +497,85 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 }
 
 enum _Step { phone, code, name, password, token }
+
+/// Список стран с поиском по названию или коду. Возвращает выбранную страну.
+class _CountryPicker extends StatefulWidget {
+  const _CountryPicker({required this.selected});
+  final Country selected;
+
+  @override
+  State<_CountryPicker> createState() => _CountryPickerState();
+}
+
+class _CountryPickerState extends State<_CountryPicker> {
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final q = _query.trim().toLowerCase();
+    final items = q.isEmpty
+        ? kCountries
+        : kCountries
+            .where((c) =>
+                c.name.toLowerCase().contains(q) ||
+                c.dialCode.contains(q) ||
+                c.iso.toLowerCase().contains(q))
+            .toList();
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.75,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: TextField(
+                  controller: _searchCtrl,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Поиск страны или кода',
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                  onChanged: (v) => setState(() => _query = v),
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: items.length,
+                  itemBuilder: (_, i) {
+                    final c = items[i];
+                    final isSel = c.iso == widget.selected.iso;
+                    return ListTile(
+                      leading:
+                          Text(c.flag, style: const TextStyle(fontSize: 24)),
+                      title: Text(c.name),
+                      trailing: Text('+${c.dialCode}',
+                          style: TextStyle(
+                              color:
+                                  Theme.of(context).colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600)),
+                      selected: isSel,
+                      onTap: () => Navigator.of(context).pop(c),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _PrimaryButton extends StatelessWidget {
   const _PrimaryButton({
