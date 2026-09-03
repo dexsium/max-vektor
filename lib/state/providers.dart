@@ -2,9 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 
 import '../core/logging.dart';
+import '../data/account/account.dart';
+import '../data/account/account_runtime.dart';
+import '../data/account/account_store.dart';
 import '../data/local/database.dart';
 import '../data/local/secure_storage.dart';
-import '../data/max/device_profile.dart';
 import '../data/max/max_client.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/chats_repository.dart';
@@ -17,84 +19,141 @@ final loggerProvider = Provider<Logger>((ref) {
   return buildAppLogger();
 });
 
-final secureStorageProvider = Provider<SecureStorage>((ref) {
-  return SecureStorage();
+final accountStoreProvider = Provider<AccountStore>((ref) => AccountStore());
+
+/// Стартовое состояние аккаунтов, прочитанное в `main()` ДО `runApp`.
+///
+/// Переопределяется в `ProviderScope(overrides: ...)`. Благодаря этому
+/// активный аккаунт известен синхронно и ни один провайдер не начинает
+/// жизнь с `null`.
+final accountsBootstrapProvider =
+    Provider<({List<MvAccount> accounts, String activeId})>((ref) {
+  throw UnimplementedError('accountsBootstrapProvider must be overridden');
 });
 
-final appDatabaseProvider = FutureProvider<AppDatabase>((ref) async {
-  return AppDatabase.instance();
-});
+/// Список аккаунтов приложения.
+class AccountsController extends Notifier<List<MvAccount>> {
+  @override
+  List<MvAccount> build() => ref.watch(accountsBootstrapProvider).accounts;
 
-final maxClientProvider = Provider<MaxClient>((ref) {
-  final logger = ref.watch(loggerProvider);
-  final storage = ref.watch(secureStorageProvider);
-  final client = MaxClient(
-    logger: logger,
-    // Стабильный deviceId на установку: убирает бан-сигнал «новое
-    // устройство на каждый запуск» на одном номере.
-    deviceIdLoader: storage.readOrCreateDeviceId,
-    // Полный официально-выглядящий userAgent для ANDROID-входа.
-    userAgentLoader: DeviceProfile.userAgent,
+  AccountStore get _store => ref.read(accountStoreProvider);
+
+  Future<void> reload() async {
+    state = await _store.list();
+  }
+
+  /// Обновить карточку аккаунта (номер, имя, userId) после входа.
+  Future<void> update(MvAccount account) async {
+    await _store.update(account);
+    await reload();
+  }
+
+  /// Завести новый аккаунт и сразу сделать его активным — дальше UI покажет
+  /// экран входа, потому что токена у него нет.
+  Future<MvAccount> addAndActivate() async {
+    final account = await _store.create();
+    await reload();
+    await ref.read(activeAccountIdProvider.notifier).switchTo(account.id);
+    return account;
+  }
+
+  /// Выйти из аккаунта и удалить его локальные данные.
+  ///
+  /// Если это был последний аккаунт — на его месте заводится пустой, чтобы
+  /// приложению всегда было куда показать экран входа.
+  Future<void> signOutAndRemove(String accountId) async {
+    await AccountRuntimes.close(accountId);
+    final next = await _store.remove(accountId);
+    if (next == null) {
+      final fresh = await _store.create();
+      await _store.setActive(fresh.id);
+      await reload();
+      ref.read(activeAccountIdProvider.notifier).setSilently(fresh.id);
+      return;
+    }
+    await reload();
+    ref.read(activeAccountIdProvider.notifier).setSilently(next);
+  }
+}
+
+final accountsProvider = NotifierProvider<AccountsController, List<MvAccount>>(
+  AccountsController.new,
+);
+
+/// Активный аккаунт. Смена этого значения перестраивает все зависимые
+/// провайдеры — но НЕ рвёт соединения: они живут в [AccountRuntimes].
+class ActiveAccountController extends Notifier<String> {
+  @override
+  String build() => ref.watch(accountsBootstrapProvider).activeId;
+
+  Future<void> switchTo(String accountId) async {
+    if (state == accountId) return;
+    await ref.read(accountStoreProvider).setActive(accountId);
+    state = accountId;
+  }
+
+  /// Установить активный аккаунт, когда запись в хранилище уже сделана
+  /// (например после удаления аккаунта).
+  void setSilently(String accountId) {
+    if (state != accountId) state = accountId;
+  }
+}
+
+final activeAccountIdProvider =
+    NotifierProvider<ActiveAccountController, String>(
+  ActiveAccountController.new,
+);
+
+/// Карточка активного аккаунта.
+final activeAccountProvider = Provider<MvAccount>((ref) {
+  final id = ref.watch(activeAccountIdProvider);
+  final accounts = ref.watch(accountsProvider);
+  return accounts.firstWhere(
+    (a) => a.id == id,
+    orElse: () => MvAccount(id: id),
   );
-  ref.onDispose(client.close);
-  return client;
 });
 
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository(
-    client: ref.watch(maxClientProvider),
-    storage: ref.watch(secureStorageProvider),
-    logger: ref.watch(loggerProvider),
-  );
+/// Живая сессия активного аккаунта.
+final accountRuntimeProvider = Provider<AccountRuntime>((ref) {
+  final id = ref.watch(activeAccountIdProvider);
+  // Намеренно без ref.onDispose: закрытие сессии — дело выхода из аккаунта,
+  // а не переключения на соседний.
+  return AccountRuntimes.of(id, ref.watch(loggerProvider));
 });
 
-final uploadRepositoryProvider = FutureProvider<UploadRepository>((ref) async {
-  final db = await ref.watch(appDatabaseProvider.future);
-  final repo = UploadRepository(
-    client: ref.watch(maxClientProvider),
-    db: db,
-    logger: ref.watch(loggerProvider),
-  );
-  ref.onDispose(repo.close);
-  return repo;
-});
+final secureStorageProvider = Provider<SecureStorage>(
+  (ref) => ref.watch(accountRuntimeProvider).storage,
+);
 
-final messagesRepositoryProvider = FutureProvider<MessagesRepository>((ref) async {
-  final db = await ref.watch(appDatabaseProvider.future);
-  final uploader = await ref.watch(uploadRepositoryProvider.future);
-  final repo = MessagesRepository(
-    client: ref.watch(maxClientProvider),
-    db: db,
-    storage: ref.watch(secureStorageProvider),
-    uploader: uploader,
-    logger: ref.watch(loggerProvider),
-  );
-  await repo.start();
-  ref.onDispose(repo.stop);
-  return repo;
-});
+final maxClientProvider = Provider<MaxClient>(
+  (ref) => ref.watch(accountRuntimeProvider).client,
+);
 
-final chatsRepositoryProvider = FutureProvider<ChatsRepository>((ref) async {
-  final db = await ref.watch(appDatabaseProvider.future);
-  return ChatsRepository(
-    client: ref.watch(maxClientProvider),
-    db: db,
-  );
-});
+final appDatabaseProvider = FutureProvider<AppDatabase>(
+  (ref) => ref.watch(accountRuntimeProvider).database(),
+);
 
-final contactsRepositoryProvider = FutureProvider<ContactsRepository>((ref) async {
-  final db = await ref.watch(appDatabaseProvider.future);
-  return ContactsRepository(
-    client: ref.watch(maxClientProvider),
-    db: db,
-  );
-});
+final authRepositoryProvider = Provider<AuthRepository>(
+  (ref) => ref.watch(accountRuntimeProvider).auth,
+);
 
-final mediaRepositoryProvider = FutureProvider<MediaRepository>((ref) async {
-  final db = await ref.watch(appDatabaseProvider.future);
-  return MediaRepository(
-    client: ref.watch(maxClientProvider),
-    db: db,
-    logger: ref.watch(loggerProvider),
-  );
-});
+final uploadRepositoryProvider = FutureProvider<UploadRepository>(
+  (ref) => ref.watch(accountRuntimeProvider).uploads(),
+);
+
+final messagesRepositoryProvider = FutureProvider<MessagesRepository>(
+  (ref) => ref.watch(accountRuntimeProvider).messages(),
+);
+
+final chatsRepositoryProvider = FutureProvider<ChatsRepository>(
+  (ref) => ref.watch(accountRuntimeProvider).chats(),
+);
+
+final contactsRepositoryProvider = FutureProvider<ContactsRepository>(
+  (ref) => ref.watch(accountRuntimeProvider).contacts(),
+);
+
+final mediaRepositoryProvider = FutureProvider<MediaRepository>(
+  (ref) => ref.watch(accountRuntimeProvider).media(),
+);

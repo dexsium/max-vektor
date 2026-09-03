@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
 import '../../state/session_controller.dart';
+import '../widgets/accounts_section.dart';
 import 'devices_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -36,6 +37,10 @@ class SettingsScreen extends ConsumerWidget {
             leading: const Icon(Icons.cloud_outlined),
           ),
           const Divider(),
+          // Список аккаунтов и «Добавить аккаунт» — прямо здесь: тап по
+          // аккаунту сразу переключает приложение на него.
+          const AccountsSection(),
+          const Divider(),
           ListTile(
             title: const Text('Устройства и сессии'),
             subtitle: const Text('Активные входы · завершить чужие'),
@@ -56,8 +61,9 @@ class SettingsScreen extends ConsumerWidget {
                 builder: (ctx) => AlertDialog(
                   title: const Text('Выйти?'),
                   content: const Text(
-                    'Локальная история чатов и контактов останется, '
-                    'но потребуется повторный логин.',
+                    'Аккаунт исчезнет из переключателя. Его локальная '
+                    'история, скачанные файлы и сохранённый вход будут '
+                    'удалены с устройства. Другие аккаунты не затрагиваются.',
                   ),
                   actions: [
                     TextButton(

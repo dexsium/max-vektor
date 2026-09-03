@@ -36,10 +36,18 @@ class MaxVektorLogPrinter extends LogPrinter {
       Level.fatal => 'F',
       _ => '?',
     };
+    // Доменный тег ([AUTH], [SOCKET], ...) ставит место вызова — переносим
+    // его из начала сообщения сразу за префиксом приложения, чтобы строка
+    // читалась как [MaxVektor][AUTH][I] текст.
+    final raw = event.message.toString();
+    final match = RegExp(r'^(\[[A-Z]+\])\s*').firstMatch(raw);
+    final domain = match?.group(1) ?? '';
+    final body = match == null ? raw : raw.substring(match.end);
     final severe = event.level.index >= Level.error.index;
-    final tag = severe ? '[MaxVektor]${MvTag.error}' : '[MaxVektor]';
-    final lines = <String>['$tag[$level] ${event.message}'];
-    if (event.error != null) lines.add('$tag[$level] cause: ${event.error}');
+    final prefix =
+        '[MaxVektor]${severe ? MvTag.error : ''}$domain[$level]';
+    final lines = <String>['$prefix $body'];
+    if (event.error != null) lines.add('$prefix cause: ${event.error}');
     return lines;
   }
 }

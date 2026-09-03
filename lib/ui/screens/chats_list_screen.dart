@@ -8,6 +8,7 @@ import '../../data/max/models/chat.dart';
 import '../../state/chats_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/connection_banner.dart';
+import 'accounts_screen.dart';
 import 'chat_screen.dart';
 import 'contacts_screen.dart';
 
@@ -35,6 +36,13 @@ class _ChatsListScreenState extends ConsumerState<ChatsListScreen> {
       appBar: AppBar(
         title: const Text(AppMeta.name),
         actions: [
+          IconButton(
+            tooltip: 'Аккаунты',
+            icon: const Icon(Icons.switch_account_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AccountsScreen()),
+            ),
+          ),
           IconButton(
             tooltip: 'Архив',
             onPressed: () => ScaffoldMessenger.of(context).showSnackBar(

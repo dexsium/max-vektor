@@ -5,6 +5,7 @@ import 'package:logger/logger.dart';
 import '../../core/errors.dart';
 import '../../core/logging.dart';
 import '../local/secure_storage.dart';
+import '../max/contact_name.dart';
 import '../max/max_client.dart';
 
 enum AuthState { unauthenticated, awaitingSms, awaiting2fa, authenticated }
@@ -23,9 +24,26 @@ class AuthRepository {
   String? _verifyToken;
   String? _trackId;
 
+  /// Имя из профиля MAX, если его удалось загрузить при последнем входе.
+  /// Нужно переключателю аккаунтов, чтобы подписать карточку без лишнего
+  /// сетевого запроса.
+  String? profileName;
+
+  /// Соединение уже поднято и залогинено.
+  ///
+  /// Мультиаккаунт держит сессии живыми, и при возврате к аккаунту LOGIN
+  /// повторять НЕ надо: частые LOGIN с одного устройства — ровно тот
+  /// поведенческий сигнал, от которого защищается ReconnectPolicy
+  /// (см. authThrottle в reconnect_policy.dart).
+  bool get isSessionLive => client.isConnected && client.token != null;
+
   /// Попытаться восстановить сессию из secure storage. true - вошли.
   /// deviceType берём из сохранённого kind — веб-токен требует WEB.
   Future<bool> tryRestoreSession() async {
+    if (isSessionLive) {
+      _log.i('${MvTag.auth} сессия уже живая — LOGIN не повторяем');
+      return true;
+    }
     final saved = await storage.readToken();
     if (saved == null) {
       _log.i('${MvTag.auth} сохранённой сессии нет — нужен вход');
@@ -37,11 +55,7 @@ class AuthRepository {
       if (!client.isConnected) await client.connect(deviceType: deviceType);
       await client.login(saved);
       _log.i('${MvTag.auth} сессия восстановлена (deviceType=$deviceType)');
-      try {
-        final me = await client.currentProfile();
-        final id = me['id'];
-        if (id is int) await storage.writeMyUserId(id);
-      } catch (_) {}
+      await _captureProfile();
       return true;
     } catch (e) {
       _log.w('${MvTag.auth} восстановление сессии не удалось: $e');
@@ -60,13 +74,9 @@ class AuthRepository {
     await client.login(token);
     await storage.writeToken(token);
     await storage.writeTokenKind('web');
-    try {
-      final me = await client.currentProfile();
-      final id = me['id'];
-      if (id is int) await storage.writeMyUserId(id);
-    } catch (e) {
-      _log.w('${MvTag.auth} профиль не загрузился после входа по токену: $e');
-    }
+    await _captureProfile(
+      onError: 'профиль не загрузился после входа по токену',
+    );
   }
 
   Future<void> requestSms(String phone) async {
@@ -182,12 +192,23 @@ class AuthRepository {
     await storage.writeToken(token);
     await storage.writeTokenKind('android');
     await client.login(token);
+    await _captureProfile();
+  }
+
+  /// Загрузить свой профиль и запомнить userId (в secure storage) и имя
+  /// (в памяти, для переключателя аккаунтов). Ошибку не пробрасываем:
+  /// вход уже состоялся, профиль — украшение.
+  Future<void> _captureProfile({String onError = 'профиль не загрузился'}) async {
     try {
       final me = await client.currentProfile();
       final id = me['id'];
       if (id is int) await storage.writeMyUserId(id);
+      final name = displayContactName(
+        me.map((k, v) => MapEntry(k.toString(), v)),
+      );
+      if (name != null && name.isNotEmpty) profileName = name;
     } catch (e) {
-      _log.w('${MvTag.auth} профиль не загрузился: $e');
+      _log.w('${MvTag.auth} $onError: $e');
     }
   }
 }

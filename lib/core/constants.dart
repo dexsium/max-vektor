@@ -59,20 +59,59 @@ class AppMeta {
   static const String upstreamUrl =
       'https://github.com/sansmaster1982/maxim-messenger';
 
-  /// Собственная БД Max Vektor. Namespace отделён от апстрима, чтобы
-  /// данные не пересекались ни с оригинальным форком, ни с официальным MAX.
-  static const String dbName = 'max_vektor.db';
+  // ───────────────────── per-account namespace ─────────────────────
+  //
+  // Max Vektor держит несколько аккаунтов MAX сразу, поэтому ВСЁ, что
+  // относится к конкретному аккаунту, живёт в собственном namespace:
+  // ключи Keychain, файл SQLite, каталог медиа и deviceId. Общий префикс
+  // `mv_` дополнительно отделяет приложение от чего угодно ещё в Keychain
+  // (сам Keychain и так изолирован bundle id ru.vektor.max).
 
-  /// Ключи secure storage с префиксом `mv_`: Keychain и так изолирован
-  /// bundle id (ru.vektor.max), но собственный namespace исключает любое
-  /// случайное пересечение при общем keychain access group.
-  static const String secureTokenKey = 'mv_max_auth_token';
-  static const String prefMyUserIdKey = 'mv_my_max_user_id';
-  static const String tokenKindKey = 'mv_max_token_kind';
+  /// Суффикс ключа: auth-token аккаунта.
+  static const String tokenKeySuffix = 'token';
 
-  /// Стабильный идентификатор устройства. Генерируется один раз и хранится
-  /// в secure storage. Переживает logout/login (это физически то же
-  /// устройство), переустановку — нет. Регенерация при каждом запуске
-  /// выглядит для антифрода MAX как поток новых устройств на одном номере.
-  static const String deviceIdKey = 'mv_max_device_id';
+  /// Суффикс ключа: мой userId в MAX.
+  static const String userIdKeySuffix = 'user_id';
+
+  /// Суффикс ключа: тип токена ('web' или 'android').
+  static const String tokenKindKeySuffix = 'token_kind';
+
+  /// Суффикс ключа: стабильный deviceId аккаунта.
+  ///
+  /// deviceId генерируется ОДИН раз на аккаунт и переживает logout/login:
+  /// регенерация на каждом запуске для антифрода MAX выглядит как поток
+  /// новых устройств на одном номере. При этом у разных аккаунтов
+  /// deviceId разные — иначе сервер видит один и тот же «телефон»,
+  /// с которого одновременно живут несколько номеров.
+  static const String deviceIdKeySuffix = 'device_id';
+
+  static const List<String> accountKeySuffixes = [
+    tokenKeySuffix,
+    userIdKeySuffix,
+    tokenKindKeySuffix,
+    deviceIdKeySuffix,
+  ];
+
+  /// Полное имя ключа Keychain для аккаунта.
+  static String accountKey(String accountId, String suffix) =>
+      'mv_a_${accountId}_$suffix';
+
+  /// Файл SQLite аккаунта.
+  static String dbNameFor(String accountId) => 'max_vektor_$accountId.db';
+
+  /// Каталог скачанных медиа аккаунта (внутри Documents).
+  static String mediaDirFor(String accountId) => 'max_vektor_media/$accountId';
+
+  // ───────────────────── миграция с одноаккаунтной версии ─────────────────
+
+  static const String legacyDbName = 'max_vektor.db';
+  static const String legacyMediaDirName = 'max_vektor_media';
+
+  /// Старый ключ → суффикс нового per-account ключа.
+  static const Map<String, String> legacyKeyMigration = {
+    'mv_max_auth_token': tokenKeySuffix,
+    'mv_my_max_user_id': userIdKeySuffix,
+    'mv_max_token_kind': tokenKindKeySuffix,
+    'mv_max_device_id': deviceIdKeySuffix,
+  };
 }

@@ -8,25 +8,43 @@ import '../max/models/chat.dart';
 import '../max/models/contact.dart';
 import '../max/models/message.dart';
 
-/// Локальная БД: чаты, сообщения, контакты, dedup id'шек.
+/// Локальная БД ОДНОГО аккаунта: чаты, сообщения, контакты, dedup id'шек.
+///
+/// У каждого аккаунта свой файл `max_vektor_<accountId>.db` — переписки
+/// разных номеров не смешиваются, а удаление аккаунта сводится к удалению
+/// одного файла.
 class AppDatabase {
-  AppDatabase._(this._db);
+  AppDatabase._(this.accountId, this._db);
+
+  /// Аккаунт, которому принадлежит база.
+  final String accountId;
 
   final Database _db;
-  static AppDatabase? _instance;
 
-  static Future<AppDatabase> instance() async {
-    if (_instance != null) return _instance!;
+  /// Открытые базы по accountId. Держим открытыми, пока живёт сессия
+  /// аккаунта: переключение между аккаунтами не должно переоткрывать SQLite.
+  static final Map<String, AppDatabase> _instances = {};
+
+  static Future<AppDatabase> forAccount(String accountId) async {
+    final cached = _instances[accountId];
+    if (cached != null) return cached;
     final dir = await getApplicationDocumentsDirectory();
-    final path = p.join(dir.path, AppMeta.dbName);
+    final path = p.join(dir.path, AppMeta.dbNameFor(accountId));
     final db = await openDatabase(
       path,
       version: 8,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
-    _instance = AppDatabase._(db);
-    return _instance!;
+    final instance = AppDatabase._(accountId, db);
+    _instances[accountId] = instance;
+    return instance;
+  }
+
+  /// Закрыть базу аккаунта (выход из аккаунта / его удаление).
+  static Future<void> closeAccount(String accountId) async {
+    final instance = _instances.remove(accountId);
+    await instance?._db.close();
   }
 
   static Future<void> _onUpgrade(

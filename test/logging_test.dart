@@ -29,14 +29,13 @@ void main() {
     });
 
     test('локальные хранилища отделены собственным namespace', () {
-      expect(AppMeta.dbName, 'max_vektor.db');
-      for (final key in [
-        AppMeta.secureTokenKey,
-        AppMeta.prefMyUserIdKey,
-        AppMeta.tokenKindKey,
-        AppMeta.deviceIdKey,
-      ]) {
-        expect(key.startsWith('mv_'), isTrue, reason: key);
+      expect(AppMeta.dbNameFor('acc1'), 'max_vektor_acc1.db');
+      for (final suffix in AppMeta.accountKeySuffixes) {
+        expect(
+          AppMeta.accountKey('acc1', suffix).startsWith('mv_a_acc1_'),
+          isTrue,
+          reason: suffix,
+        );
       }
     });
   });

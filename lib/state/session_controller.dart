@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/account/account_runtime.dart';
 import '../data/repositories/auth_repository.dart';
 import 'providers.dart';
 
@@ -36,6 +37,9 @@ class SessionState {
 class SessionController extends Notifier<SessionState> {
   @override
   SessionState build() {
+    // Смена активного аккаунта перестраивает контроллер: состояние входа
+    // принадлежит конкретному аккаунту, а не приложению.
+    ref.watch(activeAccountIdProvider);
     Future.microtask(_bootstrap);
     return const SessionState(status: SessionStatus.loading);
   }
@@ -43,17 +47,35 @@ class SessionController extends Notifier<SessionState> {
   Future<void> _bootstrap() async {
     final repo = ref.read(authRepositoryProvider);
     // Мёртвый токен (FAIL_LOGIN_TOKEN) во время reconnect → разлогин.
+    final accountId = ref.read(activeAccountIdProvider);
     repo.client.onAuthInvalid = () async {
       await repo.storage.wipe();
+      // Колбэк переживает переключение аккаунтов: протухший токен соседа
+      // не должен выкидывать на экран входа того, кто сейчас активен.
+      if (ref.read(activeAccountIdProvider) != accountId) return;
       state = const SessionState(
         status: SessionStatus.signedOut,
         error: 'Сессия истекла, войдите снова',
       );
     };
     final ok = await repo.tryRestoreSession();
+    if (ok) await _syncAccountCard();
     state = SessionState(
       status: ok ? SessionStatus.signedIn : SessionStatus.signedOut,
     );
+  }
+
+  /// Записать в карточку активного аккаунта то, чем его подписывает
+  /// переключатель: userId, номер и имя из профиля.
+  Future<void> _syncAccountCard({String? phone}) async {
+    final runtime = ref.read(accountRuntimeProvider);
+    final accounts = ref.read(accountsProvider.notifier);
+    final current = ref.read(activeAccountProvider);
+    await accounts.update(current.copyWith(
+      userId: await runtime.storage.readMyUserId(),
+      phone: phone ?? current.phone,
+      displayName: runtime.auth.profileName ?? current.displayName,
+    ));
   }
 
   Future<void> requestSms(String phone) async {
@@ -76,6 +98,7 @@ class SessionController extends Notifier<SessionState> {
     try {
       final next = await repo.submitSmsCode(code);
       if (next == AuthState.authenticated) {
+        await _syncAccountCard(phone: state.phone);
         state = SessionState(status: SessionStatus.signedIn);
       } else {
         state = state.copyWith(authFlow: AuthState.awaiting2fa);
@@ -108,6 +131,7 @@ class SessionController extends Notifier<SessionState> {
     state = state.copyWith(error: null);
     try {
       await repo.submit2fa(password);
+      await _syncAccountCard(phone: state.phone);
       state = const SessionState(status: SessionStatus.signedIn);
     } catch (e) {
       state = state.copyWith(error: _humanError(e));
@@ -125,17 +149,39 @@ class SessionController extends Notifier<SessionState> {
     }
     try {
       await repo.loginWithToken(t);
+      await _syncAccountCard();
       state = const SessionState(status: SessionStatus.signedIn);
     } catch (e) {
       state = state.copyWith(error: _humanError(e));
     }
   }
 
+  /// Выход из активного аккаунта: токен стирается, соединение рвётся,
+  /// аккаунт исчезает из переключателя вместе со своими локальными данными.
+  /// Управление уходит на аккаунт-сосед, если он есть.
   Future<void> logout() async {
     final repo = ref.read(authRepositoryProvider);
+    final accountId = ref.read(activeAccountIdProvider);
     await repo.logout();
+    await ref.read(accountsProvider.notifier).signOutAndRemove(accountId);
     state = const SessionState(status: SessionStatus.signedOut);
   }
+
+  /// Переключиться на другой аккаунт. Соединение соседа остаётся живым,
+  /// поэтому повторного LOGIN не происходит (см. AccountRuntimes).
+  Future<void> switchAccount(String accountId) async {
+    if (ref.read(activeAccountIdProvider) == accountId) return;
+    await ref.read(activeAccountIdProvider.notifier).switchTo(accountId);
+  }
+
+  /// Добавить ещё один аккаунт MAX и перейти к его входу.
+  Future<void> addAccount() async {
+    await ref.read(accountsProvider.notifier).addAndActivate();
+  }
+
+  /// Открыт ли уже сокет этого аккаунта — переключатель показывает это
+  /// пользователю, чтобы было понятно, какие аккаунты сейчас онлайн.
+  bool isAccountLive(String accountId) => AccountRuntimes.isOpen(accountId);
 }
 
 final sessionProvider = NotifierProvider<SessionController, SessionState>(

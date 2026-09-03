@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'app.dart';
+import 'data/account/account_store.dart';
+import 'state/providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,7 +17,20 @@ Future<void> main() async {
   await initializeDateFormatting('ru_RU', null);
   await initializeDateFormatting('ru', null);
   Intl.defaultLocale = 'ru_RU';
-  runApp(const ProviderScope(child: MaxVektorApp()));
+
+  // Реестр аккаунтов читаем ДО runApp: активный аккаунт должен быть известен
+  // синхронно, иначе провайдеры сессии стартуют без namespace хранилищ.
+  // Здесь же выполняется разовый перенос данных с одноаккаунтной версии.
+  final bootstrap = await AccountStore().bootstrap();
+
+  runApp(
+    ProviderScope(
+      overrides: [
+        accountsBootstrapProvider.overrideWithValue(bootstrap),
+      ],
+      child: const MaxVektorApp(),
+    ),
+  );
 }
 
 /// На Windows/Linux/macOS — sqflite через FFI. На Android/iOS — нативный.

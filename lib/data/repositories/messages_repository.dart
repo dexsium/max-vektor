@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/constants.dart';
 import '../../core/errors.dart';
 import '../../core/logging.dart';
 import '../local/database.dart';
@@ -568,9 +569,12 @@ class MessagesRepository {
         return null;
       }
 
-      // Готовим путь в getApplicationDocumentsDirectory()/max_vektor_media.
+      // Медиа складываем в каталог СВОЕГО аккаунта:
+      // Documents/max_vektor_media/<accountId>.
       final docs = await getApplicationDocumentsDirectory();
-      final mediaDir = Directory(p.join(docs.path, 'max_vektor_media'));
+      final mediaDir = Directory(
+        p.join(docs.path, AppMeta.mediaDirFor(db.accountId)),
+      );
       if (!await mediaDir.exists()) {
         await mediaDir.create(recursive: true);
       }
