@@ -261,11 +261,17 @@ class AuthRepository {
     return digits.length <= 4 ? '' : digits.substring(digits.length - 4);
   }
 
+  /// Завершение ИНТЕРАКТИВНОГО входа (код, 2FA, регистрация).
+  ///
+  /// Сервер уже перевёл сессию в ONLINE и вернул постоянный токен — второй
+  /// LOGIN (op 19) на этой сессии он отвергает с `proto.payload`. Поэтому
+  /// сессию помечаем вошедшей локально ([MaxClient.markLoggedIn]), а op 19
+  /// оставляем только на восстановление после перезапуска.
   Future<void> _completeLogin(String token) async {
     _log.i('${MvTag.auth} вход завершён, токен ${mvRedact(token)} сохранён');
     await storage.writeToken(token);
     await storage.writeTokenKind(_authTokenKind);
-    await client.login(token);
+    client.markLoggedIn(token);
     await _captureProfile();
   }
 

@@ -530,19 +530,46 @@ class MaxClient {
       return (authToken: null, trackId: null, registerToken: registerToken);
     }
 
-    final authToken = RawParsers.findLongToken(f.body);
+    // Постоянный токен входа лежит в tokenAttrs.LOGIN.token (так его берёт
+    // транспорт официального клиента, case 18/115). findLongToken по сырым
+    // байтам иногда цеплял НЕ тот длинный токен — отсюда и «proto.payload»
+    // на LOGIN, и плавающие сбои. Сырой парсер оставлен запасным.
+    final authToken =
+        _loginToken(f.decoded) ?? RawParsers.findLongToken(f.body);
     if (authToken != null) {
       return (authToken: authToken, trackId: null, registerToken: null);
     }
 
-    if (_contains(f.body, 'passwordChallenge')) {
-      final tid = RawParsers.findUuid(f.body);
+    final trackId = _challengeTrackId(f.decoded);
+    if (trackId != null || _contains(f.body, 'passwordChallenge')) {
+      final tid = trackId ?? RawParsers.findUuid(f.body);
       if (tid == null) {
         throw const MaxLoginFailed('2FA required but trackId not found');
       }
       return (authToken: null, trackId: tid, registerToken: null);
     }
     throw const MaxLoginFailed('no auth token and no 2FA challenge');
+  }
+
+  /// Постоянный токен входа из ответа авторизации: `tokenAttrs.LOGIN.token`.
+  /// Он же — токен для повторного входа (op 19) при перезапуске.
+  static String? _loginToken(Object? decoded) {
+    if (decoded is! Map) return null;
+    final attrs = decoded['tokenAttrs'];
+    if (attrs is! Map) return null;
+    final login = attrs['LOGIN'];
+    if (login is! Map) return null;
+    final token = login['token'];
+    return (token is String && token.isNotEmpty) ? token : null;
+  }
+
+  /// trackId 2FA-челленджа из `passwordChallenge.trackId`.
+  static String? _challengeTrackId(Object? decoded) {
+    if (decoded is! Map) return null;
+    final ch = decoded['passwordChallenge'];
+    if (ch is! Map) return null;
+    final tid = ch['trackId'];
+    return (tid is String && tid.isNotEmpty) ? tid : null;
   }
 
   /// Понятное объяснение отказа регистрации по коду ошибки сервера.
@@ -625,8 +652,15 @@ class MaxClient {
       if (hint != null) throw MaxLoginFailed('$hint\n[${r.code}]');
       _failWith(f, 'REGISTER');
     }
-    final authToken = RawParsers.findLongToken(f.body);
-    if (authToken == null) {
+    // Ответ op 23 кладёт токен в payload.token (транспорт офиц. клиента,
+    // case 23), но на всякий случай пробуем и tokenAttrs.LOGIN, и сырой парсер.
+    final dec = f.decoded;
+    final authToken = (dec is Map && dec['token'] is String
+            ? dec['token'] as String
+            : null) ??
+        _loginToken(dec) ??
+        RawParsers.findLongToken(f.body);
+    if (authToken == null || authToken.isEmpty) {
       throw const MaxLoginFailed(
         'Регистрация прошла, но сервер не вернул токен сессии',
       );
@@ -641,9 +675,27 @@ class MaxClient {
       'password': password,
     });
     if (f.cmd != 1) _failWith(f, '2FA');
-    final t = RawParsers.findLongToken(f.body);
+    // Токен входа — tokenAttrs.LOGIN.token (case 115 транспорта). Сырой
+    // парсер оставлен запасным.
+    final t = _loginToken(f.decoded) ?? RawParsers.findLongToken(f.body);
     if (t == null) throw const MaxLoginFailed('auth token missing after 2FA');
     return t;
+  }
+
+  /// Пометить сессию как вошедшую БЕЗ повторного LOGIN (op 19).
+  ///
+  /// Интерактивная авторизация (код op 18, 2FA op 115, регистрация op 23)
+  /// уже переводит сессию в ONLINE на сервере и возвращает постоянный токен.
+  /// Слать после этого op 19 нельзя — сервер отвечает `proto.payload`.
+  /// op 19 нужен только при перезапуске: вход по сохранённому токену.
+  void markLoggedIn(String token) {
+    _token = token;
+    _sinceLogin
+      ..reset()
+      ..start();
+    _startKeepalive();
+    _reconnect.rearm();
+    _log.i('${MvTag.auth} сессия ONLINE (без повторного LOGIN)');
   }
 
   /// Логин по сохранённому токену. Возвращает raw payload, оттуда вызывающий
