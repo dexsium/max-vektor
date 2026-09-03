@@ -8,6 +8,7 @@ import '../../state/theme_controller.dart';
 import 'accounts_screen.dart';
 import 'devices_screen.dart';
 import 'diagnostics_screen.dart';
+import 'profile_edit_screen.dart';
 import 'qr_login_scanner_screen.dart';
 import '../widgets/app_snack.dart';
 
@@ -42,6 +43,7 @@ class SettingsScreen extends ConsumerWidget {
           children: [
             _Header(
               onQr: () => _push(context, const QrLoginScannerScreen()),
+              onEdit: () => _push(context, const ProfileEditScreen()),
               onAccounts: () => _push(context, const AccountsScreen()),
             ),
 
@@ -269,13 +271,19 @@ class SettingsScreen extends ConsumerWidget {
 /// Шапка настроек: QR слева, карандаш справа, по центру крупный аватар,
 /// имя и номер — как в официальном приложении MAX.
 class _Header extends ConsumerWidget {
-  const _Header({required this.onQr, required this.onAccounts});
+  const _Header({
+    required this.onQr,
+    required this.onEdit,
+    required this.onAccounts,
+  });
 
   /// QR-иконка (слева) — вход по QR-коду.
   final VoidCallback onQr;
 
-  /// Иконка-карандаш (справа). Редактирование профиля пока не поддержано,
-  /// поэтому ведёт на переключатель аккаунтов.
+  /// Карандаш (справа) — редактирование профиля.
+  final VoidCallback onEdit;
+
+  /// Переключатель аккаунтов (по тапу на аватар/имя).
   final VoidCallback onAccounts;
 
   @override

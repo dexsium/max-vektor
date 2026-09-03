@@ -170,6 +170,32 @@ class UploadRepository {
   /// Достаёт upload endpoint из ответа опкодов 80/82/87. Поля точно не
   /// зафиксированы в декомпиле, поэтому ищем варианты, которые встречаются
   /// в реальных payload'ах MAX и других мессенджеров на той же основе.
+  /// Загрузить фото ПРОФИЛЯ и вернуть photoToken (для op 16 avatarType).
+  ///
+  /// Отдельно от [upload]: без строки в attachments, не привязано к чату —
+  /// нужен только токен. Флоу тот же: requestPhotoUpload(profile:true) →
+  /// PUT сырых байтов → токен из ответа.
+  Future<String> uploadProfilePhoto(String path) async {
+    final resp = await client.requestPhotoUpload(count: 1, profile: true);
+    final url = _extractUploadUrl(resp);
+    if (url == null) throw const UploadError('upload URL missing (avatar)');
+    final file = File(path);
+    final bytes = await file.readAsBytes();
+    final request = http.Request('POST', Uri.parse(url))
+      ..bodyBytes = bytes
+      ..headers['Content-Type'] = 'application/octet-stream'
+      ..headers['Content-Disposition'] = 'attachment; filename=avatar.jpg';
+    final streamed = await _http.send(request);
+    final body = await streamed.stream.toBytes();
+    if (streamed.statusCode < 200 || streamed.statusCode >= 300) {
+      throw UploadError('avatar HTTP ${streamed.statusCode}');
+    }
+    final parsed = _extractTokenFromBytes(body);
+    final token = parsed.token;
+    if (token == null) throw const UploadError('avatar token missing');
+    return token;
+  }
+
   String? _extractUploadUrl(Map<String, dynamic> resp) {
     for (final key in const ['url', 'uploadUrl', 'endpoint']) {
       final v = resp[key];

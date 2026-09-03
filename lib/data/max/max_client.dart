@@ -922,6 +922,31 @@ class MaxClient {
   /// Запрос upload-URL для фото. Возвращает декодированный ответ — клиент
   /// должен взять оттуда `url` (HTTP POST endpoint) и `photoToken`.
   /// Поле profile=true используется для аватарок.
+  /// Обновление профиля (op 16). Поля сверены с APK (o8b.java): firstName,
+  /// lastName, description, link, photoToken (+avatarType при смене аватара).
+  /// Пустая строка в description/link удаляет значение. Возвращает
+  /// обновлённый профиль.
+  Future<Map<String, dynamic>> updateProfile({
+    String? firstName,
+    String? lastName,
+    String? description,
+    String? link,
+    String? photoToken,
+  }) async {
+    final payload = <String, Object?>{};
+    if (firstName != null) payload['firstName'] = firstName;
+    if (lastName != null) payload['lastName'] = lastName;
+    if (description != null) payload['description'] = description;
+    if (link != null) payload['link'] = link;
+    if (photoToken != null) {
+      payload['photoToken'] = photoToken;
+      payload['avatarType'] = 'USER_AVATAR';
+    }
+    final f = await _request(MaxOp.profile, payload);
+    if (f.cmd != 1) _failWith(f, 'PROFILE_UPDATE');
+    return _asMap(f.decoded);
+  }
+
   Future<Map<String, dynamic>> requestPhotoUpload({
     int count = 1,
     bool profile = false,
