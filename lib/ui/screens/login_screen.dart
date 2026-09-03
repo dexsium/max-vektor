@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -22,8 +24,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _pwVisible = false;
   _Mode _mode = _Mode.sms;
 
+  /// Тикает раз в секунду, пока идёт отсчёт до повторного запроса кода.
+  Timer? _resendTicker;
+
   @override
   void dispose() {
+    _resendTicker?.cancel();
     _phoneCtrl.dispose();
     _codeCtrl.dispose();
     _pwCtrl.dispose();
@@ -129,17 +135,60 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ];
   }
 
+  /// Сколько секунд осталось до повторного запроса кода. 0 — можно сейчас.
+  int _resendCountdown(SessionState session) {
+    final at = session.resendAvailableAt;
+    if (at == null) return 0;
+    final left = at.difference(DateTime.now()).inSeconds;
+    return left > 0 ? left : 0;
+  }
+
+  /// Перерисовывать экран раз в секунду, пока идёт отсчёт.
+  void _ensureResendTicker(SessionState session) {
+    final running = _resendCountdown(session) > 0;
+    if (running && _resendTicker == null) {
+      _resendTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) return;
+        setState(() {});
+        if (_resendCountdown(ref.read(sessionProvider)) == 0) {
+          _resendTicker?.cancel();
+          _resendTicker = null;
+        }
+      });
+    } else if (!running) {
+      _resendTicker?.cancel();
+      _resendTicker = null;
+    }
+  }
+
   // ─────────────── вход по SMS ───────────────
   List<Widget> _smsForm(SessionState session, SessionController ctrl) {
     if (session.authFlow == AuthState.awaitingSms) {
+      _ensureResendTicker(session);
+      final countdown = _resendCountdown(session);
+      final len = session.codeLength;
+      final attempts = session.attemptsLeft;
       return [
-        Text('Введи код из SMS, отправленный на ${session.phone ?? ''}'),
+        Text('Введите код, отправленный на ${session.phone ?? ''}'),
+        const SizedBox(height: 4),
+        Text(
+          // Сервер не сообщает канал доставки, поэтому называем оба:
+          // при установленном официальном MAX код обычно приходит в него,
+          // а не отдельной SMS.
+          'Код приходит в SMS или в официальное приложение MAX, '
+          'если вы вошли в него на этом телефоне.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
         const SizedBox(height: 16),
         TextField(
           controller: _codeCtrl,
           keyboardType: TextInputType.number,
           autofocus: true,
-          decoration: const InputDecoration(labelText: 'Код'),
+          maxLength: len,
+          decoration: InputDecoration(
+            labelText: len == null ? 'Код' : 'Код из $len цифр',
+            counterText: '',
+          ),
           onSubmitted: _busy
               ? null
               : (_) => _run(() => ctrl.submitSmsCode(_codeCtrl.text.trim())),
@@ -155,14 +204,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         const SizedBox(height: 8),
         TextButton(
-          onPressed: _busy
+          onPressed: (_busy || countdown > 0)
               ? null
               : () {
                   _codeCtrl.clear();
                   _run(() => ctrl.resendSms());
                 },
-          child: const Text('Получить SMS заново'),
+          child: Text(
+            countdown > 0
+                ? 'Запросить код заново можно через $countdown с'
+                : 'Запросить код заново',
+          ),
         ),
+        if (attempts != null)
+          Text(
+            'Осталось запросов кода: $attempts',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
       ];
     }
 

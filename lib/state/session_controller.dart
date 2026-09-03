@@ -12,11 +12,23 @@ class SessionState {
   final String? phone;
   final String? error;
 
+  /// Сколько цифр в коде подтверждения (сервер сообщает в ответе на op 17).
+  final int? codeLength;
+
+  /// Момент, начиная с которого можно запросить код заново.
+  final DateTime? resendAvailableAt;
+
+  /// Сколько запросов кода ещё разрешено.
+  final int? attemptsLeft;
+
   const SessionState({
     required this.status,
     this.authFlow = AuthState.unauthenticated,
     this.phone,
     this.error,
+    this.codeLength,
+    this.resendAvailableAt,
+    this.attemptsLeft,
   });
 
   SessionState copyWith({
@@ -24,12 +36,18 @@ class SessionState {
     AuthState? authFlow,
     String? phone,
     String? error,
+    int? codeLength,
+    DateTime? resendAvailableAt,
+    int? attemptsLeft,
   }) {
     return SessionState(
       status: status ?? this.status,
       authFlow: authFlow ?? this.authFlow,
       phone: phone ?? this.phone,
       error: error,
+      codeLength: codeLength ?? this.codeLength,
+      resendAvailableAt: resendAvailableAt ?? this.resendAvailableAt,
+      attemptsLeft: attemptsLeft ?? this.attemptsLeft,
     );
   }
 }
@@ -82,10 +100,16 @@ class SessionController extends Notifier<SessionState> {
     final repo = ref.read(authRepositoryProvider);
     state = state.copyWith(error: null);
     try {
-      await repo.requestSms(phone);
+      final challenge = await repo.requestSms(phone);
+      final resendMs = challenge.resendAfterMs;
       state = state.copyWith(
         phone: phone,
         authFlow: AuthState.awaitingSms,
+        codeLength: challenge.codeLength,
+        attemptsLeft: challenge.attemptsLeft,
+        resendAvailableAt: resendMs == null
+            ? null
+            : DateTime.now().add(Duration(milliseconds: resendMs)),
       );
     } catch (e) {
       state = state.copyWith(error: _humanError(e));

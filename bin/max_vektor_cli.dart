@@ -109,7 +109,7 @@ Future<void> _interactiveLogin(MaxClient client, File tokenFile) async {
     throw const MaxLoginFailed('phone is empty');
   }
   stdout.writeln('Запрашиваю SMS…');
-  final verifyToken = await client.startAuthSms(phone);
+  final verifyToken = (await client.startAuthSms(phone)).token;
 
   stdout.write('Код из SMS: ');
   final code = stdin.readLineSync()?.trim() ?? '';

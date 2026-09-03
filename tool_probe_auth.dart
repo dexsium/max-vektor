@@ -20,16 +20,32 @@ import 'package:max_vektor/data/max/max_client.dart';
 
 const String _invalidPhone = '+7000';
 
-Future<void> main() async {
-  final client = MaxClient(logger: Logger(printer: SimplePrinter()));
+Future<void> main(List<String> argv) async {
+  // Номер можно передать аргументом — ТОЛЬКО несуществующий, для разбора
+  // ответа сервера. На реальный номер уйдёт настоящая SMS.
+  final phone = argv.isEmpty ? _invalidPhone : argv.first;
+  // ProductionFilter + level=all: DevelopmentFilter в `dart run` глушит
+  // вывод, а нам нужен весь обмен, включая RESP с полями ответа.
+  final client = MaxClient(
+    logger: Logger(
+      level: Level.all,
+      filter: ProductionFilter(),
+      printer: SimplePrinter(),
+    ),
+  );
   _say('proto v${MaxProto.protoVersion}, app ${MaxProto.appVersion}, '
       'build ${MaxProto.appBuild}');
   try {
     await client.connect();
     _say('INIT: ok — handshake сервер принял');
     try {
-      await client.startAuthSms(_invalidPhone);
-      _say('AUTH_REQUEST: неожиданно принят (номер должен быть невалиден)');
+      final c = await client.startAuthSms(phone);
+      _say('AUTH_REQUEST: принят. Код из ${c.codeLength} цифр, '
+          'повтор через ${c.resendAfterMs}мс, '
+          'попыток осталось ${c.attemptsLeft}.');
+      _say('Структуру ответа смотрите в строке RESP op=17 выше: '
+          'там видно, что сервер сообщает о доставке кода.');
+      return;
     } catch (e) {
       _say('AUTH_REQUEST: $e');
       _say('');

@@ -25,6 +25,15 @@ enum MaxConnectionState { disconnected, connecting, connected, reconnecting }
 /// Один MaxClient = одно TLS-соединение к api.oneme.ru:443 + один читающий
 /// сабскрипшен. Запросы идут через [_request], ответы матчатся по seq.
 /// Сервер-пуш сваливается в [incomingStream].
+/// Условия ввода кода подтверждения, присланные сервером вместе с
+/// verify-токеном (ответ на op 17).
+typedef MaxSmsChallenge = ({
+  String token,
+  int? codeLength,
+  int? resendAfterMs,
+  int? attemptsLeft,
+});
+
 class MaxClient {
   MaxClient({
     this.onPushDebug,
@@ -362,7 +371,12 @@ class MaxClient {
     );
   }
 
-  Future<String> startAuthSms(String phone) async {
+  /// Ответ сервера на запрос кода подтверждения.
+  ///
+  /// Кроме verify-токена сервер сообщает условия ввода: длину кода,
+  /// через сколько можно запросить код заново и сколько попыток осталось.
+  /// Раньше всё это отбрасывалось, и пользователю нечего было показать.
+  Future<MaxSmsChallenge> startAuthSms(String phone) async {
     final f = await _request(MaxOp.authRequest, {
       'phone': phone,
       'type': 'START_AUTH',
@@ -370,7 +384,26 @@ class MaxClient {
     if (f.cmd != 1) _failWith(f, 'AUTH_REQUEST');
     final t = RawParsers.findLongToken(f.body);
     if (t == null) throw const MaxLoginFailed('verify token not extracted');
-    return t;
+
+    int? intField(String key) {
+      final d = f.decoded;
+      if (d is! Map) return null;
+      final v = d[key];
+      return v is num ? v.toInt() : null;
+    }
+
+    final challenge = (
+      token: t,
+      codeLength: intField('codeLength'),
+      resendAfterMs: intField('requestMaxDuration'),
+      attemptsLeft: intField('requestCountLeft'),
+    );
+    _log.i(
+      '${MvTag.auth} код запрошен: длина=${challenge.codeLength ?? '?'} '
+      'повтор через=${challenge.resendAfterMs ?? '?'}мс '
+      'попыток осталось=${challenge.attemptsLeft ?? '?'}',
+    );
+    return challenge;
   }
 
   /// Возвращает (authToken, trackIdFor2fa). Один из двух непустой.

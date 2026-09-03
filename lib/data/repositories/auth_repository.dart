@@ -79,7 +79,11 @@ class AuthRepository {
     );
   }
 
-  Future<void> requestSms(String phone) async {
+  /// Условия последнего запроса кода: длина, пауза до повтора, остаток
+  /// попыток. UI показывает их пользователю.
+  MaxSmsChallenge? lastChallenge;
+
+  Future<MaxSmsChallenge> requestSms(String phone) async {
     _log.i('${MvTag.auth} запрос SMS-кода для номера ***${_tail(phone)}');
     // SMS-флоу — всегда ANDROID. Если до этого было WEB-соединение
     // (вход по токену), закрываем его и поднимаем чистое ANDROID, иначе
@@ -87,10 +91,13 @@ class AuthRepository {
     if (client.isConnected) {
       await client.close();
     }
-    _verifyToken = await _withFreshConnection(
+    final challenge = await _withFreshConnection(
       () => client.startAuthSms(phone),
       deviceType: 'ANDROID',
     );
+    _verifyToken = challenge.token;
+    lastChallenge = challenge;
+    return challenge;
   }
 
   /// Гарантирует живое TLS-соединение и выполняет [op]. Если соединение упало
