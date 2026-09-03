@@ -11,6 +11,17 @@ class MaxLoginFailed extends MaxError {
   String toString() => 'MaxLoginFailed: $message';
 }
 
+/// Сервер отверг сам ТОКЕН входа как недействительный (login.token /
+/// login.cred / FAIL_LOGIN_TOKEN). Только это — повод разлогинить и вывести
+/// на экран входа. Прочие сбои LOGIN (proto.payload, временная
+/// недоступность) — транзиентные: их надо ретраить, а не выкидывать
+/// пользователя из рабочего аккаунта.
+class MaxTokenRejected extends MaxLoginFailed {
+  const MaxTokenRejected(super.message);
+  @override
+  String toString() => 'MaxTokenRejected: $message';
+}
+
 class MaxNotConnected extends MaxError {
   const MaxNotConnected(super.message);
   @override

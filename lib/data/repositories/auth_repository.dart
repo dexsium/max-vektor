@@ -95,9 +95,16 @@ class AuthRepository {
       _log.i('${MvTag.auth} сессия восстановлена (deviceType=$deviceType)');
       await _captureProfile();
       return true;
-    } catch (e) {
-      _log.w('${MvTag.auth} восстановление сессии не удалось: $e');
+    } on MaxTokenRejected catch (e) {
+      // Токен реально мёртв — только тогда стираем и просим войти заново.
+      _log.w('${MvTag.auth} токен отвергнут сервером, нужен вход: $e');
       await storage.deleteToken();
+      return false;
+    } catch (e) {
+      // Транзиентный сбой (нет сети, proto.payload, таймаут) — токен НЕ
+      // трогаем: следующий запуск/reconnect попробует снова. Показываем
+      // экран входа, но сохранённый вход остаётся.
+      _log.w('${MvTag.auth} восстановление отложено (транзиентно): $e');
       return false;
     }
   }

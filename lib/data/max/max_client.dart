@@ -723,7 +723,26 @@ class MaxClient {
       'presenceSync': 0,
       'draftsSync': 0,
     });
-    if (f.cmd != 1) _failWith(f, 'LOGIN');
+    if (f.cmd != 1) {
+      final r = _rejection(f);
+      _log.w(
+        '${MvTag.auth} LOGIN отклонён: cmd=${f.cmd} error=${r.code ?? '-'} '
+        'message=${r.message ?? '-'}',
+      );
+      // Токен мёртв ТОЛЬКО при явных «token»-кодах — тогда разлогин.
+      // Всё остальное (proto.payload, временные сбои) транзиентно: бросаем
+      // обычную ошибку, чтобы reconnect повторил, а не выкидывал из аккаунта.
+      final code = r.code ?? '';
+      final tokenDead = code.contains('login.token') ||
+          code.contains('login.cred') ||
+          code.contains('FAIL_LOGIN_TOKEN') ||
+          code == 'token.invalid' ||
+          code == 'auth.token.invalid';
+      if (tokenDead) {
+        throw MaxTokenRejected(r.localized ?? 'Сессия истекла: $code');
+      }
+      throw MaxError('LOGIN cmd=${f.cmd} ${r.code ?? ''}'.trim());
+    }
     _token = token;
     _sinceLogin
       ..reset()
@@ -1475,10 +1494,10 @@ class _ReconnectManager {
       _running = false;
     } catch (e) {
       _log.w('${MvTag.socket} reconnect attempt failed: $e');
-      // Токен мёртв (FAIL_LOGIN_TOKEN / login.cred / login.token) — нет смысла
-      // долбить сервер протухшим токеном. Останавливаем цикл, чистим токен и
-      // сигналим, чтобы UI вышел на экран входа.
-      if (e is MaxLoginFailed) {
+      // Разлогиниваем ТОЛЬКО когда сервер явно отверг сам токен
+      // (MaxTokenRejected). Прочие сбои LOGIN — транзиентные: их ретраим,
+      // иначе один сетевой сбой выкидывает из рабочего аккаунта.
+      if (e is MaxTokenRejected) {
         _client._token = null;
         _running = false;
         _cancelled = true;
