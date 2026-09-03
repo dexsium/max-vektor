@@ -9,6 +9,7 @@ import 'accounts_screen.dart';
 import 'devices_screen.dart';
 import 'data_saver_screen.dart';
 import 'security_screen.dart';
+import 'storage_screen.dart';
 import 'diagnostics_screen.dart';
 import 'profile_edit_screen.dart';
 import 'qr_login_scanner_screen.dart';
@@ -93,7 +94,7 @@ class SettingsScreen extends ConsumerWidget {
               _Tile(
                 icon: Icons.storage_outlined,
                 title: 'Память',
-                onTap: () => _soon(context),
+                onTap: () => _push(context, const StorageScreen()),
                 last: true,
               ),
             ]),

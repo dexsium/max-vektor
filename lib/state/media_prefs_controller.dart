@@ -20,6 +20,27 @@ enum MediaAuto {
       switch (v) { 1 => always, -1 => never, _ => wifi };
 }
 
+/// Срок хранения медиа в кэше устройства («Память» → «Хранить медиа…»).
+/// Хранится как число дней под ключом `app.media.caching.time`
+/// (`-1` — хранить всегда).
+enum CacheKeep {
+  week(7, 'Неделя'),
+  month(30, 'Месяц'),
+  year(365, 'Год'),
+  forever(-1, 'Всегда');
+
+  const CacheKeep(this.days, this.label);
+  final int days;
+  final String label;
+
+  static CacheKeep fromRaw(int v) => switch (v) {
+        7 => week,
+        365 => year,
+        -1 => forever,
+        _ => month,
+      };
+}
+
 /// Настройки раздела «Экономия батареи и сети».
 ///
 /// Это клиентские префы (в оригинале — локальный SharedPreferences, не
@@ -34,6 +55,7 @@ class MediaPrefs {
     this.videoSendQuality = '720',
     this.gifAutoplay = true,
     this.audioAutoload = MediaAuto.wifi,
+    this.cacheKeep = CacheKeep.month,
   });
 
   final MediaAuto photoAutoload;
@@ -43,6 +65,7 @@ class MediaPrefs {
   final String videoSendQuality;
   final bool gifAutoplay;
   final MediaAuto audioAutoload;
+  final CacheKeep cacheKeep;
 
   MediaPrefs copyWith({
     MediaAuto? photoAutoload,
@@ -50,6 +73,7 @@ class MediaPrefs {
     String? videoSendQuality,
     bool? gifAutoplay,
     MediaAuto? audioAutoload,
+    CacheKeep? cacheKeep,
   }) =>
       MediaPrefs(
         photoAutoload: photoAutoload ?? this.photoAutoload,
@@ -57,6 +81,7 @@ class MediaPrefs {
         videoSendQuality: videoSendQuality ?? this.videoSendQuality,
         gifAutoplay: gifAutoplay ?? this.gifAutoplay,
         audioAutoload: audioAutoload ?? this.audioAutoload,
+        cacheKeep: cacheKeep ?? this.cacheKeep,
       );
 }
 
@@ -68,6 +93,7 @@ class MediaPrefsController extends Notifier<MediaPrefs> {
   static const _kVideoCompress = 'app.media.video.compress';
   static const _kGif = 'app.media.autoplay.gif';
   static const _kAudio = 'app.media.load.audio_messages';
+  static const _kCacheKeep = 'app.media.caching.time';
 
   static const _backend = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -94,6 +120,8 @@ class MediaPrefsController extends Notifier<MediaPrefs> {
         videoSendQuality: all[_kVideoCompress] ?? '720',
         gifAutoplay: (all[_kGif] ?? 'true') != 'false',
         audioAutoload: auto(_kAudio, MediaAuto.wifi),
+        cacheKeep: CacheKeep.fromRaw(
+            int.tryParse(all[_kCacheKeep] ?? '') ?? CacheKeep.month.days),
       );
       state = loaded;
     } catch (_) {
@@ -130,6 +158,11 @@ class MediaPrefsController extends Notifier<MediaPrefs> {
   Future<void> setAudioAutoload(MediaAuto v) async {
     state = state.copyWith(audioAutoload: v);
     await _write(_kAudio, '${v.raw}');
+  }
+
+  Future<void> setCacheKeep(CacheKeep v) async {
+    state = state.copyWith(cacheKeep: v);
+    await _write(_kCacheKeep, '${v.days}');
   }
 }
 

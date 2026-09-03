@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/local/cache_managers.dart';
 import '../../data/max/models/attach.dart';
 import '../../state/providers.dart';
 import '../screens/video_player_screen.dart';
@@ -171,8 +172,13 @@ class _AttachPreviewState extends ConsumerState<AttachPreview> {
     }
     final url = attach.thumbnailUrl ?? attach.downloadUrl;
     if (url != null && url.isNotEmpty) {
+      // Стикеры кешируем отдельным менеджером — чтобы раздел «Память»
+      // считал и чистил их как отдельную категорию.
       return CachedNetworkImage(
         imageUrl: url,
+        cacheManager: attach.type == MaxAttachType.sticker
+            ? MvCache.stickers
+            : MvCache.photos,
         width: _previewWidth,
         fit: BoxFit.cover,
         placeholder: (_, __) => _placeholder(),
