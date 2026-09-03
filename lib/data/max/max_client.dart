@@ -366,6 +366,23 @@ class MaxClient {
     );
   }
 
+  /// Отказы, где серверного текста мало и нужно объяснить, что делать.
+  static String? _actionableHint(String? code) {
+    if (code == null) return null;
+    // Аккаунт есть, но у него не задан пароль двухфакторной защиты, и MAX
+    // не пускает вход с нового устройства, пока его не поставят. В
+    // официальном веб-клиенте это отдельный экран `session-no-2fa`.
+    if (code.contains('no2fa')) {
+      return 'MAX не разрешает вход с нового устройства, пока на аккаунте '
+          'не задан пароль двухфакторной защиты.\n\n'
+          'Откройте официальное приложение MAX на телефоне, где вы уже '
+          'вошли: Настройки → Конфиденциальность и безопасность → '
+          'задайте пароль (двухфакторная защита). Затем вернитесь сюда и '
+          'войдите заново — после кода приложение спросит этот пароль.';
+    }
+    return null;
+  }
+
   /// Единый выход по отказу: пишет причину в лог (уровень warning, поэтому
   /// видно и в release) и бросает понятное пользователю сообщение.
   Never _failWith(MaxFrame f, String op) {
@@ -374,6 +391,8 @@ class MaxClient {
       '${MvTag.auth} $op отклонён сервером: cmd=${f.cmd} '
       'error=${r.code ?? '-'} message=${r.message ?? '-'}',
     );
+    final hint = _actionableHint(r.code);
+    if (hint != null) throw MaxLoginFailed(hint);
     if (r.localized != null) throw MaxLoginFailed(r.localized!);
     if (r.code != null) throw MaxLoginFailed('$op: ${r.code}');
     if (r.message != null) throw MaxLoginFailed('$op: ${r.message}');
@@ -470,6 +489,8 @@ class MaxClient {
     });
     if (f.cmd != 1) {
       final r = _rejection(f);
+      final hint = _actionableHint(r.code);
+      if (hint != null) throw MaxLoginFailed(hint);
       if (r.localized == null && r.code == null && f.cmd == 3) {
         _log.w('${MvTag.auth} AUTH_CONFIRM отклонён: cmd=3 без деталей');
         throw const MaxLoginFailed(
