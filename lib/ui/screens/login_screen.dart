@@ -137,44 +137,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
+                    // ВАЖНО: между ConstrainedBox(minHeight) и IntrinsicHeight
+                    // не должно быть Center/Align — они ослабляют ограничение
+                    // по высоте, Spacer'ы схлопываются в 0 и весь блок снова
+                    // центрируется целиком (лого уезжает вниз). Поэтому
+                    // ширину ограничиваем боковыми отступами, а не Center.
+                    const maxWidth = 420.0;
+                    final w = constraints.maxWidth;
+                    final side = w > maxWidth + 48 ? (w - maxWidth) / 2 : 24.0;
                     return SingleChildScrollView(
                       child: ConstrainedBox(
                         constraints:
                             BoxConstraints(minHeight: constraints.maxHeight),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Center(
-                            child: ConstrainedBox(
-                              constraints:
-                                  const BoxConstraints(maxWidth: 420),
-                              child: IntrinsicHeight(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    SizedBox(height: canCancel ? 8 : 16),
-                                    _header(step),
-                                    if (session.error != null) ...[
-                                      const SizedBox(height: 20),
-                                      _ErrorBanner(text: session.error!),
-                                    ],
-                                    const Spacer(flex: 2),
-                                    AnimatedSwitcher(
-                                      duration:
-                                          const Duration(milliseconds: 220),
-                                      child: Column(
-                                        key: ValueKey(step),
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: _body(step, session, ctrl),
-                                      ),
-                                    ),
-                                    const Spacer(flex: 3),
-                                    _footer(step, ctrl),
-                                    const SizedBox(height: 12),
-                                  ],
+                        child: IntrinsicHeight(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: side),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                SizedBox(height: canCancel ? 8 : 16),
+                                _header(step),
+                                if (session.error != null) ...[
+                                  const SizedBox(height: 20),
+                                  _ErrorBanner(text: session.error!),
+                                ],
+                                // Шапка выше поля заметно тяжелее футера, поэтому
+                                // свободное место делим 1:6 — замерено на 390×844:
+                                // центр поля номера ≈ 420 px при центре экрана 422,
+                                // лого — вверху (64–214 px).
+                                const Spacer(flex: 1),
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 220),
+                                  child: Column(
+                                    key: ValueKey(step),
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: _body(step, session, ctrl),
+                                  ),
                                 ),
-                              ),
+                                const Spacer(flex: 6),
+                                _footer(step, ctrl),
+                                const SizedBox(height: 12),
+                              ],
                             ),
                           ),
                         ),

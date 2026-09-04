@@ -44,6 +44,31 @@ void main() {
     expect(find.text('Получить код'), findsOneWidget);
   });
 
+  testWidgets('экран входа: лого вверху, поле номера по центру экрана',
+      (tester) async {
+    // Размер экрана iPhone. Раскладка живёт на Spacer'ах внутри
+    // IntrinsicHeight — ловим регрессию, когда их схлопывает Center/Align.
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(_app(const LoginScreen()));
+    await tester.pumpAndSettle();
+
+    const h = 844.0;
+    final logoY = tester.getCenter(find.byType(VektorMark)).dy;
+    final phoneY =
+        tester.getCenter(find.widgetWithText(TextField, 'Номер телефона')).dy;
+
+    // Лого — в верхней трети экрана.
+    expect(logoY, lessThan(h / 3),
+        reason: 'лого должно быть поднято вверх, а оно на $logoY');
+    // Поле номера — по центру (допуск ±5% высоты экрана, ~42 px).
+    expect((phoneY - h / 2).abs(), lessThan(h * 0.05),
+        reason: 'поле номера должно быть по центру (~${h / 2}), а оно на $phoneY');
+  });
+
   testWidgets('экран входа: есть переход на вход по токену', (tester) async {
     await tester.pumpWidget(_app(const LoginScreen()));
 
