@@ -11,6 +11,7 @@ import '../../data/repositories/auth_repository.dart';
 import '../../state/session_controller.dart';
 import '../widgets/code_input.dart';
 import '../widgets/vektor_mark.dart';
+import 'diagnostics_screen.dart';
 
 /// Экран входа и регистрации.
 ///
@@ -89,15 +90,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (canCancel)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: IconButton(
-                    tooltip: L.of(context).loginBack,
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: _busy ? null : () => ctrl.cancelAddAccount(),
+              // Верхний ряд: назад (если это добавление аккаунта) слева и
+              // «Диагностика» справа — лог нужен и на экране входа (после
+              // вылета настройки недоступны, а причину вылета видно в логе).
+              Row(
+                children: [
+                  if (canCancel)
+                    IconButton(
+                      tooltip: L.of(context).loginBack,
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: _busy ? null : () => ctrl.cancelAddAccount(),
+                    ),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: L.of(context).settingsDiagnostics,
+                    icon: const Icon(Icons.bug_report_outlined),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const DiagnosticsScreen(),
+                      ),
+                    ),
                   ),
-                ),
+                ],
+              ),
               Expanded(
                 child: Center(
                   child: SingleChildScrollView(
