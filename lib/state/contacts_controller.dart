@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/max/models/contact.dart';
@@ -201,32 +199,43 @@ class AddressBookView {
   }
 }
 
-/// Читает адресную книгу и в фоне резолвит непроверенные номера в MAX
-/// (троттлинг + дедуп внутри репозитория). По мере нахождения обновляет список
-/// контактов, чтобы «В Максе» пополнялся сам.
+/// Читает адресную книгу устройства. Сама по себе НИКАКИХ запросов к серверу
+/// не делает: показ книги и разбиение на «В Максе»/«Пригласить» — локальные.
+///
+/// Резолв номеров в MAX (op 46) — только по явному действию пользователя
+/// ([resolveNow]) и с предупреждением. Автоматический резолв при входе в
+/// «Контакты» был причиной блокировки аккаунта: даже с троттлингом
+/// перечисление справочника — главный поведенческий сигнал антифрода MAX.
+/// Больше так не делаем.
 class AddressBookController extends AsyncNotifier<AddressBookView> {
   @override
   Future<AddressBookView> build() async {
     final repo = await ref.watch(contactsRepositoryProvider.future);
     try {
       final entries = await repo.readAddressBook();
-      // Фоновый резолв — не блокирует показ книги.
-      unawaited(_resolve(repo));
       return AddressBookView(entries: entries);
     } on StateError {
       return const AddressBookView(permissionDenied: true);
     }
   }
 
-  Future<void> _resolve(ContactsRepository repo) async {
+  /// Ручной резолв непроверенных номеров (не больше
+  /// [ContactsRepository.bulkLookupCap] за раз, каждый номер — не более
+  /// одного раза за всю жизнь БД). Возвращает число найденных в MAX.
+  Future<int> resolveNow({
+    void Function(int done, int total)? onProgress,
+  }) async {
     final current = state.valueOrNull;
-    if (current == null || current.entries.isEmpty) return;
+    if (current == null || current.entries.isEmpty) return 0;
+    final repo = await ref.read(contactsRepositoryProvider.future);
     state = AsyncData(current.copyWith(resolving: true));
     try {
-      final found = await repo.resolveAddressBook(current.entries);
+      final found = await repo.resolveAddressBook(
+        current.entries,
+        onProgress: onProgress,
+      );
       if (found > 0) ref.invalidate(contactsListProvider);
-    } catch (_) {
-      // Оффлайн/ошибка резолва — не критично, покажем то, что уже известно.
+      return found;
     } finally {
       final c = state.valueOrNull;
       if (c != null) state = AsyncData(c.copyWith(resolving: false));

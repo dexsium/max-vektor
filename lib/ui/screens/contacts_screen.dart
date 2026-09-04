@@ -47,6 +47,15 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
             onPressed: _toggleSearch,
             icon: Icon(_showSearch ? Icons.search_off : Icons.search),
           ),
+          // Резолв книги в MAX — ТОЛЬКО вручную и с предупреждением:
+          // автоматический запуск приводил к блокировке аккаунта.
+          IconButton(
+            tooltip: l.contactsImport,
+            onPressed: book.valueOrNull?.resolving == true
+                ? null
+                : _resolveManually,
+            icon: const Icon(Icons.cloud_download_outlined),
+          ),
           IconButton(
             tooltip: l.contactsAddByNumber,
             onPressed: _showAddDialog,
@@ -303,6 +312,43 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
         child: Text(L.of(context).contactsInviteBtn),
       ),
     );
+  }
+
+  /// Ручная проверка номеров книги в MAX. Сначала — предупреждение о риске
+  /// (массовый резолв = анти-бан-сигнал), запуск только по явному согласию.
+  Future<void> _resolveManually() async {
+    final l = L.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.contactsImportTitle),
+        content:
+            Text(l.contactsImportWarn('${ContactsRepository.bulkLookupCap}')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l.commonContinue),
+          ),
+        ],
+      ),
+    );
+    if (proceed != true || !mounted) return;
+    var checked = 0;
+    try {
+      final found = await ref
+          .read(addressBookProvider.notifier)
+          .resolveNow(onProgress: (_, total) => checked = total);
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.contactsFoundInMax('$found', '$checked'))),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(l.commonError('$e'))));
+    }
   }
 
   void _toggleSearch() {
