@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../widgets/app_snack.dart';
+import 'blacklist_screen.dart';
+import 'set_password_screen.dart';
 
 /// Раздел «Безопасность» — приватность как в официальном приложении MAX.
 ///
@@ -30,6 +32,32 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     'app.privacy.phone.number.privacy': 'NOBODY',
   };
   bool _safeMode = false;
+
+  /// null — состояние ещё не загружено; true/false — установлен ли пароль
+  /// входа (2FA). Подтягиваем через op 104 при открытии раздела.
+  bool? _pwdEnabled;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPasswordState();
+  }
+
+  Future<void> _loadPasswordState() async {
+    try {
+      final d = await ref.read(maxClientProvider).get2faDetails();
+      if (mounted) setState(() => _pwdEnabled = d.enabled);
+    } catch (_) {
+      // Оффлайн/сессия недоступна — оставляем неизвестным (бейдж-подсказку).
+    }
+  }
+
+  Future<void> _openPassword() async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const SetPasswordScreen()),
+    );
+    if (changed == true) _loadPasswordState();
+  }
 
   Map<String, String> _accessLabels(L l) => {
         'ALL': l.accessAll,
@@ -69,9 +97,10 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             _NavTile(
               icon: Icons.vpn_key_outlined,
               title: l.secPassword,
-              subtitle: l.secPasswordSub,
-              badge: true,
-              onTap: () => AppSnack.show(context, l.secPasswordSub),
+              subtitle: _pwdEnabled == true ? l.pwdStateOn : l.secPasswordSub,
+              // Бейдж-подсказка «!» только пока пароль не установлен.
+              badge: _pwdEnabled != true,
+              onTap: _openPassword,
             ),
           ]),
           _Group(children: [
@@ -117,7 +146,9 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
               icon: Icons.block,
               title: l.secBlacklist,
               subtitle: l.secBlacklistSub,
-              onTap: () => AppSnack.soon(context),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const BlacklistScreen()),
+              ),
             ),
           ]),
         ],

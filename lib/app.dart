@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/constants.dart';
 import 'l10n/app_localizations.dart';
 import 'state/appearance_controller.dart';
+import 'state/locale_controller.dart';
 import 'state/theme_controller.dart';
 import 'ui/screens/splash_screen.dart';
 import 'ui/theme/app_theme.dart';
@@ -21,6 +22,9 @@ class MaxVektorApp extends ConsumerWidget {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ref.watch(themeModeProvider),
+      // Явно выбранный язык (глобус на экране входа / раздел «Язык»).
+      // null — следовать за системным языком устройства.
+      locale: ref.watch(localeProvider),
       // Локализация: интерфейс следует за системным языком устройства
       // (как в официальном приложении). Неподдержанный язык → русский.
       localizationsDelegates: const [

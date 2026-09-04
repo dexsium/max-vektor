@@ -8,6 +8,23 @@ import '../max/contact_name.dart';
 import '../max/max_client.dart';
 import '../max/models/contact.dart';
 
+/// Запись адресной книги устройства: имя + номер телефона.
+class AddressBookEntry {
+  const AddressBookEntry({
+    required this.displayName,
+    required this.phone,
+    required this.key,
+  });
+
+  final String displayName;
+
+  /// Номер как в книге (для показа/приглашения).
+  final String phone;
+
+  /// Каноничный ключ для сопоставления с контактами MAX (последние 10 цифр).
+  final String key;
+}
+
 class ContactsRepository {
   ContactsRepository({required this.client, required this.db});
 
@@ -16,6 +33,92 @@ class ContactsRepository {
 
   Future<List<MaxContact>> listLocal() => db.contacts();
   Future<MaxContact?> get(int id) => db.contact(id);
+
+  /// Каноничный ключ телефона для сопоставления: только цифры, последние 10
+  /// (устойчиво к вариациям +7/8/код страны). null — если номер невалиден.
+  static String? phoneKey(String raw) {
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 7) return null;
+    return digits.length > 10 ? digits.substring(digits.length - 10) : digits;
+  }
+
+  /// Прочитать адресную книгу устройства (с запросом разрешения). Возвращает
+  /// уникальные по номеру записи. Бросает [StateError] при отказе в доступе.
+  Future<List<AddressBookEntry>> readAddressBook() async {
+    final granted = await FlutterContacts.requestPermission(readonly: true);
+    if (!granted) {
+      throw StateError('Нет доступа к контактам');
+    }
+    final raw = await FlutterContacts.getContacts(withProperties: true);
+    final byKey = <String, AddressBookEntry>{};
+    for (final c in raw) {
+      for (final ph in c.phones) {
+        final key = phoneKey(ph.number);
+        if (key == null) continue;
+        // Первое имя для номера побеждает; телефонов у контакта может быть
+        // несколько — каждый номер отдельной записью.
+        byKey.putIfAbsent(
+          key,
+          () => AddressBookEntry(
+            displayName: c.displayName.trim().isEmpty
+                ? ph.number
+                : c.displayName.trim(),
+            phone: ph.number,
+            key: key,
+          ),
+        );
+      }
+    }
+    final list = byKey.values.toList()
+      ..sort((a, b) =>
+          a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
+    return list;
+  }
+
+  Future<Set<String>> checkedKeys() => db.checkedPhones();
+
+  /// Фоновый резолв номеров из книги, ещё не проверенных в MAX. Anti-ban:
+  /// не более [bulkLookupCap] за раз, строго последовательно с джиттером, и
+  /// каждый номер помечается проверенным (повторно не резолвится). Возвращает
+  /// число найденных в MAX.
+  Future<int> resolveAddressBook(
+    List<AddressBookEntry> book, {
+    void Function(int done, int total)? onProgress,
+  }) async {
+    final checked = await db.checkedPhones();
+    // Каноничные ключи уже известных MAX-контактов — их не резолвим.
+    final known = <String>{};
+    for (final c in await db.contacts()) {
+      final k = c.phone == null ? null : phoneKey(c.phone!);
+      if (k != null) known.add(k);
+    }
+    final pending = <AddressBookEntry>[];
+    for (final e in book) {
+      if (checked.contains(e.key) || known.contains(e.key)) continue;
+      pending.add(e);
+      if (pending.length >= bulkLookupCap) break;
+    }
+    if (pending.isEmpty) return 0;
+
+    final total = pending.length;
+    var done = 0;
+    var found = 0;
+    final rng = Random();
+    final checkedNow = <String>[];
+    onProgress?.call(done, total);
+    for (final e in pending) {
+      if (await _lookupOne(e.phone)) found++;
+      checkedNow.add(e.key);
+      done++;
+      onProgress?.call(done, total);
+      if (done < total) {
+        final ms = 1100 + rng.nextInt(700);
+        await Future<void>.delayed(Duration(milliseconds: ms));
+      }
+    }
+    await db.markPhonesChecked(checkedNow);
+    return found;
+  }
 
   /// Найти контакт по телефону, сохранить локально, вернуть.
   /// Бросает [StateError] если сервер ничего не нашёл.
@@ -55,6 +158,25 @@ class ContactsRepository {
 
   Future<void> remove(int contactId) async {
     await db.deleteContact(contactId);
+  }
+
+  /// Чёрный список: локально заблокированные контакты.
+  Future<List<MaxContact>> listBlocked() => db.blockedContacts();
+
+  /// Заблокировать/разблокировать контакт. Сначала шлём мутацию на сервер
+  /// (op 34 CONTACT_UPDATE), при успехе фиксируем локальный флаг — так список
+  /// переживает перезапуск и виден офлайн. [contact] нужен, чтобы завести
+  /// строку, если блокируем собеседника не из адресной книги.
+  Future<void> setBlocked(int contactId, bool blocked,
+      {MaxContact? contact}) async {
+    await client.setContactBlocked(contactId, blocked: blocked);
+    await db.setContactBlocked(
+      contactId,
+      blocked: blocked,
+      name: contact?.name,
+      phone: contact?.phone,
+      avatarUrl: contact?.avatarUrl,
+    );
   }
 
   Future<List<MaxContact>> search(String query) async {

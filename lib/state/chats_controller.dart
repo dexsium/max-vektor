@@ -92,6 +92,13 @@ class ChatsListController extends AsyncNotifier<List<MaxChat>> {
     await _reload();
   }
 
+  /// Удалить чат локально (свайп «Удалить»).
+  Future<void> deleteChat(int chatId) async {
+    final repo = await ref.read(chatsRepositoryProvider.future);
+    await repo.deleteChat(chatId);
+    await _reload();
+  }
+
   Future<void> toggleArchive(int chatId, bool archived) async {
     final db = await ref.read(appDatabaseProvider.future);
     await db.setChatFlag(chatId, archived: archived);

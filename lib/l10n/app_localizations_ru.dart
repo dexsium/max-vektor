@@ -148,6 +148,9 @@ class LRu extends L {
   String get langTitle => 'Язык приложения';
 
   @override
+  String get langSystem => 'Системный язык';
+
+  @override
   String get langHintSystem =>
       'Изменить можно в системных настройках — найдите там «Язык» и выберите нужный';
 
@@ -165,6 +168,58 @@ class LRu extends L {
 
   @override
   String get secPasswordSub => 'Двухфакторная защита';
+
+  @override
+  String get pwdTitle => 'Пароль для входа';
+
+  @override
+  String get pwdStateOn => 'Пароль установлен';
+
+  @override
+  String get pwdStateOff => 'Не установлен';
+
+  @override
+  String get pwdDesc => 'Пароль запрашивается при входе с нового устройства.';
+
+  @override
+  String get pwdNew => 'Новый пароль';
+
+  @override
+  String get pwdRepeat => 'Повторите пароль';
+
+  @override
+  String get pwdHintLabel => 'Подсказка (необязательно)';
+
+  @override
+  String get pwdHintDesc =>
+      'Подсказка видна на экране входа и поможет вспомнить пароль.';
+
+  @override
+  String get pwdSave => 'Сохранить';
+
+  @override
+  String get pwdSaving => 'Сохранение…';
+
+  @override
+  String get pwdSaved => 'Пароль сохранён';
+
+  @override
+  String get pwdMismatch => 'Пароли не совпадают';
+
+  @override
+  String pwdTooShort(int n) {
+    return 'Минимум $n символов';
+  }
+
+  @override
+  String pwdTooLong(int n) {
+    return 'Максимум $n символов';
+  }
+
+  @override
+  String pwdHintTooLong(int n) {
+    return 'Подсказка не длиннее $n символов';
+  }
 
   @override
   String get secFamily => 'Семейная защита';
@@ -202,6 +257,25 @@ class LRu extends L {
   @override
   String get secBlacklistSub =>
       'Кто не может писать, звонить и добавлять в чаты';
+
+  @override
+  String get blEmpty => 'Чёрный список пуст';
+
+  @override
+  String get blDesc =>
+      'Заблокированные не могут писать вам, звонить и добавлять в чаты.';
+
+  @override
+  String get blUnblock => 'Разблокировать';
+
+  @override
+  String get blAdd => 'Заблокировать контакт';
+
+  @override
+  String get blNoContacts => 'Нет контактов для блокировки';
+
+  @override
+  String get blSearch => 'Поиск';
 
   @override
   String get accessAll => 'все';
@@ -305,6 +379,9 @@ class LRu extends L {
 
   @override
   String get devOnline => 'В сети';
+
+  @override
+  String get devUnknownDevice => 'Неизвестное устройство';
 
   @override
   String get devTerminate => 'Завершить';
@@ -552,6 +629,36 @@ class LRu extends L {
   @override
   String get contactsEmpty =>
       'Контактов нет. Импортируйте адресную книгу или добавьте номер вручную.';
+
+  @override
+  String get contactsSectionInMax => 'В Максе';
+
+  @override
+  String get contactsSectionInvite => 'Пригласить в Max Vektor';
+
+  @override
+  String get contactsInviteBtn => 'Пригласить';
+
+  @override
+  String get contactsInviteCopied => 'Приглашение скопировано';
+
+  @override
+  String get contactsNoAccessTitle => 'Нет доступа к контактам';
+
+  @override
+  String get contactsNoAccessSub =>
+      'Разрешите доступ, чтобы видеть, кто из ваших контактов уже в MAX.';
+
+  @override
+  String get contactsGrantAccess => 'Разрешить доступ';
+
+  @override
+  String get contactsSyncing => 'Синхронизация контактов…';
+
+  @override
+  String contactsInviteText(String name) {
+    return '$name, давай общаться в мессенджере MAX!';
+  }
 
   @override
   String get callsCreate => 'Создать звонок';

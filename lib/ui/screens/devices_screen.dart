@@ -66,80 +66,63 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
     return const [];
   }
 
+  /// Идентификатор сессии для закрытия. В ответе SESSIONS_INFO (op 96, класс
+  /// hxf→fvf) отдельного id нет — сессия однозначно определяется полем `time`
+  /// (время последней активности). Его же официальный клиент (x0g) использует
+  /// как идентификатор строки. -1 → нет времени (не даём закрыть).
   int? _sessionId(Map<String, dynamic> s) {
-    for (final k in const ['sessionId', 'id', 'session']) {
-      final v = s[k];
-      if (v is num) return v.toInt();
-    }
+    final v = s['time'];
+    if (v is num && v > 0) return v.toInt();
     return null;
   }
 
-  bool _isCurrent(Map<String, dynamic> s) {
-    for (final k in const ['isCurrent', 'current', 'self', 'thisDevice']) {
-      if (s[k] == true) return true;
-    }
-    return false;
-  }
+  /// Текущая сессия — поле `current` (bool) из ответа сервера.
+  bool _isCurrent(Map<String, dynamic> s) => s['current'] == true;
 
-  bool _isOnline(Map<String, dynamic> s) =>
-      s['online'] == true || s['isOnline'] == true;
+  /// В ответе нет явного признака «в сети»: онлайн считаем только текущее
+  /// устройство (им пользуются прямо сейчас), для остальных показываем время.
+  bool _isOnline(Map<String, dynamic> s) => _isCurrent(s);
 
-  /// Тип устройства (IOS/ANDROID/WEB). Суффикс «(текущая)» добавляется в UI.
+  /// Название устройства/клиента — поле `client` (напр. «MAX iOS»,
+  /// «Chrome», модель телефона). Суффикс «(текущая)» добавляется в UI.
   String _title(Map<String, dynamic> s) {
-    final head = (s['deviceType'] ?? s['type'])?.toString();
-    return (head == null || head.isEmpty) ? 'Device' : head;
+    final client = s['client']?.toString().trim();
+    if (client != null && client.isNotEmpty) return client;
+    // Запасной вариант, если сервер не прислал client: первая строка info.
+    final info = s['info']?.toString().trim();
+    if (info != null && info.isNotEmpty) return info.split('\n').first;
+    return L.of(context).devUnknownDevice;
   }
 
-  /// Подзаголовок: модель, версия ОС/приложения, страна, регион, IP —
-  /// как в официальном приложении (склеиваем присутствующие поля).
+  /// Подзаголовок: информация об устройстве (`info`: версия ОС/приложения,
+  /// модель) и местоположение (`location`: страна/город) — как в официальном
+  /// приложении (x0g склеивает info и location).
   String _subtitle(Map<String, dynamic> s) {
     final parts = <String>[];
     void add(Object? v) {
-      final str = v?.toString().trim();
+      final str = v?.toString().replaceAll('\n', ', ').trim();
       if (str != null && str.isNotEmpty) parts.add(str);
     }
 
-    add(s['deviceName']);
-    add(s['osVersion'] ?? s['appVersion']);
-
-    String? country, region;
-    final loc = s['location'];
-    if (loc is Map) {
-      final lm = loc.map((k, v) => MapEntry(k.toString(), v));
-      country = lm['country']?.toString();
-      region = (lm['region'] ?? lm['regionName'] ?? lm['city'])?.toString();
-    }
-    country ??= s['country']?.toString();
-    region ??= (s['region'] ?? s['city'])?.toString();
-    add(country);
-    add(region);
-
-    final ip = (s['ip'] ?? s['ipAddress'] ?? s['remoteIp'])?.toString();
-    if (ip != null && ip.isNotEmpty) parts.add('IP $ip');
-
-    return parts.join(', ');
+    // Для текущей сессии info дублирует client в заголовке — не повторяем.
+    if (!_isCurrent(s)) add(s['info']);
+    add(s['location']);
+    return parts.join(' · ');
   }
 
-  /// Правый статус: «В сети» либо время последней активности.
+  /// Правый статус: «В сети» для текущего устройства, иначе время последней
+  /// активности (поле `time`).
   String _statusText(BuildContext context, Map<String, dynamic> s) {
     if (_isOnline(s)) return L.of(context).devOnline;
-    for (final k in const [
-      'time',
-      'lastActivityTime',
-      'lastActivity',
-      'lastSeen',
-      'updateTime',
-    ]) {
-      final v = s[k];
-      if (v is num && v > 1000000000000) {
-        final dt = DateTime.fromMillisecondsSinceEpoch(v.toInt());
-        final now = DateTime.now();
-        final sameDay =
-            dt.year == now.year && dt.month == now.month && dt.day == now.day;
-        return sameDay
-            ? DateFormat.Hm().format(dt)
-            : DateFormat('dd.MM.yy').format(dt);
-      }
+    final v = s['time'];
+    if (v is num && v > 1000000000000) {
+      final dt = DateTime.fromMillisecondsSinceEpoch(v.toInt());
+      final now = DateTime.now();
+      final sameDay =
+          dt.year == now.year && dt.month == now.month && dt.day == now.day;
+      return sameDay
+          ? DateFormat.Hm().format(dt)
+          : DateFormat('dd.MM.yy').format(dt);
     }
     return '';
   }
@@ -194,7 +177,7 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
       return;
     }
     await _run(
-      () => ref.read(maxClientProvider).closeSessions(sessionId: id),
+      () => ref.read(maxClientProvider).closeSessions(sessionTime: id),
     );
   }
 

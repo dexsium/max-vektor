@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../data/max/models/contact.dart';
 import '../../l10n/app_localizations.dart';
@@ -9,6 +10,10 @@ import '../../state/contacts_controller.dart';
 import '../../state/providers.dart';
 import 'chat_screen.dart';
 
+/// Экран «Контакты» в стиле MAX: сверху — те, кто уже в MAX (тап открывает
+/// чат), ниже — остальные из адресной книги с кнопкой «Пригласить». Кто из
+/// книги уже в MAX, выясняется фоновым резолвом (op 46) с троттлингом и
+/// дедупом (см. [AddressBookController]/[ContactsRepository]).
 class ContactsScreen extends ConsumerStatefulWidget {
   const ContactsScreen({super.key});
 
@@ -19,6 +24,7 @@ class ContactsScreen extends ConsumerStatefulWidget {
 class _ContactsScreenState extends ConsumerState<ContactsScreen> {
   bool _showSearch = false;
   final _searchCtrl = TextEditingController();
+  String _query = '';
 
   @override
   void dispose() {
@@ -28,24 +34,21 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final async = ref.watch(contactsListProvider);
+    final l = L.of(context);
+    final maxContacts = ref.watch(contactsListProvider);
+    final book = ref.watch(addressBookProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(L.of(context).navContacts),
+        title: Text(l.navContacts),
         actions: [
           IconButton(
-            tooltip: _showSearch ? L.of(context).contactsHideSearch : L.of(context).commonSearch,
+            tooltip: _showSearch ? l.contactsHideSearch : l.commonSearch,
             onPressed: _toggleSearch,
             icon: Icon(_showSearch ? Icons.search_off : Icons.search),
           ),
           IconButton(
-            tooltip: L.of(context).contactsImport,
-            onPressed: _runImport,
-            icon: const Icon(Icons.cloud_download_outlined),
-          ),
-          IconButton(
-            tooltip: L.of(context).contactsAddByNumber,
+            tooltip: l.contactsAddByNumber,
             onPressed: _showAddDialog,
             icon: const Icon(Icons.person_add_alt),
           ),
@@ -59,7 +62,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
                     controller: _searchCtrl,
                     autofocus: true,
                     decoration: InputDecoration(
-                      hintText: L.of(context).commonSearch,
+                      hintText: l.commonSearch,
                       isDense: true,
                       filled: true,
                       border: OutlineInputBorder(
@@ -67,49 +70,237 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
                         borderSide: BorderSide.none,
                       ),
                       prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchCtrl.text.isEmpty
+                      suffixIcon: _query.isEmpty
                           ? null
                           : IconButton(
                               icon: const Icon(Icons.clear),
                               onPressed: () {
                                 _searchCtrl.clear();
-                                ref
-                                    .read(contactsListProvider.notifier)
-                                    .search('');
-                                ref
-                                    .read(contactsSearchQueryProvider.notifier)
-                                    .state = '';
-                                setState(() {});
+                                setState(() => _query = '');
                               },
                             ),
                     ),
-                    onChanged: (v) {
-                      ref.read(contactsListProvider.notifier).search(v);
-                      ref.read(contactsSearchQueryProvider.notifier).state = v;
-                      setState(() {});
-                    },
+                    onChanged: (v) => setState(() => _query = v),
                   ),
                 ),
               )
             : null,
       ),
-      body: async.when(
+      body: maxContacts.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(L.of(context).commonError('$e'))),
-        data: (items) {
-          if (items.isEmpty) {
-            return _EmptyState(
-              onAdd: _showAddDialog,
-              onImport: _runImport,
-              isSearch: _searchCtrl.text.isNotEmpty,
-            );
-          }
-          return _GroupedContactsList(
-            items: items,
-            onTap: _openChat,
-            onDelete: _confirmDelete,
-          );
+        error: (e, _) => Center(child: Text(l.commonError('$e'))),
+        data: (contacts) => _buildBody(context, contacts, book),
+      ),
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context,
+    List<MaxContact> maxContacts,
+    AsyncValue<AddressBookView> bookAsync,
+  ) {
+    final l = L.of(context);
+    final view = bookAsync.valueOrNull ?? const AddressBookView();
+
+    // Каноничные ключи телефонов контактов, уже известных в MAX.
+    final registeredKeys = <String>{
+      for (final c in maxContacts)
+        if (c.phone != null) ...{
+          if (ContactsRepository.phoneKey(c.phone!) != null)
+            ContactsRepository.phoneKey(c.phone!)!,
         },
+    };
+    // Имя из адресной книги по ключу — для более понятной подписи MAX-контакта.
+    final bookNameByKey = <String, String>{
+      for (final e in view.entries) e.key: e.displayName,
+    };
+
+    // «В Максе»: контакты из БД (исключаем заблокированных из общего списка).
+    final inMax = maxContacts.where((c) => !c.blocked).toList()
+      ..sort((a, b) => _nameOf(a, bookNameByKey)
+          .toLowerCase()
+          .compareTo(_nameOf(b, bookNameByKey).toLowerCase()));
+
+    // «Пригласить»: записи книги, которых нет в MAX.
+    final invite = view.entries
+        .where((e) => !registeredKeys.contains(e.key))
+        .toList();
+
+    // Фильтр поиска.
+    final q = _query.trim().toLowerCase();
+    final inMaxF = q.isEmpty
+        ? inMax
+        : inMax.where((c) {
+            final n = _nameOf(c, bookNameByKey).toLowerCase();
+            final p = (c.phone ?? '').toLowerCase();
+            return n.contains(q) || p.contains(q);
+          }).toList();
+    final inviteF = q.isEmpty
+        ? invite
+        : invite.where((e) {
+            return e.displayName.toLowerCase().contains(q) ||
+                e.phone.toLowerCase().contains(q);
+          }).toList();
+
+    final rows = <Widget>[];
+
+    if (view.resolving) {
+      rows.add(_syncingBanner(context));
+    }
+    if (view.permissionDenied) {
+      rows.add(_accessCard(context));
+    }
+
+    if (inMaxF.isNotEmpty) {
+      rows.add(_sectionHeader(context, l.contactsSectionInMax));
+      for (final c in inMaxF) {
+        rows.add(_maxContactTile(context, c, bookNameByKey));
+      }
+    }
+    if (inviteF.isNotEmpty) {
+      rows.add(_sectionHeader(context, l.contactsSectionInvite));
+      for (final e in inviteF) {
+        rows.add(_inviteTile(context, e));
+      }
+    }
+
+    if (rows.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            q.isNotEmpty ? l.commonNothingFound : l.contactsEmpty,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.read(addressBookProvider.notifier).retry();
+        await ref.read(contactsListProvider.notifier).refresh();
+      },
+      child: ListView(children: rows),
+    );
+  }
+
+  String _nameOf(MaxContact c, Map<String, String> bookNames) {
+    final n = c.name?.trim();
+    if (n != null && n.isNotEmpty && n != 'Контакт ${c.id}') return n;
+    final key = c.phone == null ? null : ContactsRepository.phoneKey(c.phone!);
+    if (key != null) {
+      final bn = bookNames[key];
+      if (bn != null && bn.isNotEmpty) return bn;
+    }
+    return c.phone ?? L.of(context).contactPlaceholder('${c.id}');
+  }
+
+  Widget _sectionHeader(BuildContext context, String text) {
+    return Container(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Text(text, style: Theme.of(context).textTheme.labelLarge),
+    );
+  }
+
+  Widget _syncingBanner(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 12),
+          Text(L.of(context).contactsSyncing,
+              style: TextStyle(color: scheme.onSurfaceVariant)),
+        ],
+      ),
+    );
+  }
+
+  Widget _accessCard(BuildContext context) {
+    final l = L.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.contactsNoAccessTitle,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(l.contactsNoAccessSub,
+              style: TextStyle(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: () => ref.read(addressBookProvider.notifier).retry(),
+            child: Text(l.contactsGrantAccess),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _maxContactTile(
+    BuildContext context,
+    MaxContact c,
+    Map<String, String> bookNames,
+  ) {
+    final name = _nameOf(c, bookNames);
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '#';
+    return Dismissible(
+      key: ValueKey('contact-${c.id}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        color: Theme.of(context).colorScheme.errorContainer,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Icon(Icons.delete,
+            color: Theme.of(context).colorScheme.onErrorContainer),
+      ),
+      confirmDismiss: (_) async {
+        _confirmDelete(c);
+        return false;
+      },
+      child: ListTile(
+        leading: CircleAvatar(child: Text(initial)),
+        title: Text(name),
+        subtitle: c.phone == null ? null : Text(c.phone!),
+        trailing: const Icon(Icons.chat_bubble_outline),
+        onTap: () => _openChat(c),
+      ),
+    );
+  }
+
+  Widget _inviteTile(BuildContext context, AddressBookEntry e) {
+    final initial = e.displayName.isNotEmpty
+        ? e.displayName[0].toUpperCase()
+        : '#';
+    final scheme = Theme.of(context).colorScheme;
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: scheme.surfaceContainerHighest,
+        child: Text(initial,
+            style: TextStyle(color: scheme.onSurfaceVariant)),
+      ),
+      title: Text(e.displayName),
+      subtitle: Text(e.phone),
+      trailing: OutlinedButton(
+        onPressed: () => _invite(e),
+        child: Text(L.of(context).contactsInviteBtn),
       ),
     );
   }
@@ -119,10 +310,23 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
       _showSearch = !_showSearch;
       if (!_showSearch) {
         _searchCtrl.clear();
-        ref.read(contactsListProvider.notifier).search('');
-        ref.read(contactsSearchQueryProvider.notifier).state = '';
+        _query = '';
       }
     });
+  }
+
+  Future<void> _invite(AddressBookEntry e) async {
+    final l = L.of(context);
+    // Системный «Поделиться» (iOS UIActivityViewController / Android chooser):
+    // пользователь сам выбирает SMS/мессенджер для приглашения.
+    final box = context.findRenderObject() as RenderBox?;
+    await Share.share(
+      l.contactsInviteText(e.displayName),
+      subject: L.of(context).contactsSectionInvite,
+      // iPad требует origin для поповера — иначе краш.
+      sharePositionOrigin:
+          box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+    );
   }
 
   void _openChat(MaxContact c) {
@@ -142,16 +346,16 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(L.of(context).contactsDeleteTitle),
-        content: Text(c.name ?? c.phone ?? L.of(context).contactPlaceholder('${c.id}')),
+        title: Text(l.contactsDeleteTitle),
+        content: Text(c.name ?? c.phone ?? l.contactPlaceholder('${c.id}')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(L.of(context).commonCancel),
+            child: Text(l.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(L.of(context).commonDelete),
+            child: Text(l.commonDelete),
           ),
         ],
       ),
@@ -165,94 +369,6 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
     }
   }
 
-  Future<void> _runImport() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final l = L.of(context);
-    final rootNav = Navigator.of(context, rootNavigator: true);
-
-    // Массовый резолв номеров — поведенческий бан-сигнал MAX. Предупреждаем
-    // и берём явное согласие, прежде чем перечислять справочник.
-    final proceed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l.contactsImportTitle),
-        content: Text(l.contactsImportWarn('${ContactsRepository.bulkLookupCap}')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(L.of(context).commonCancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(L.of(context).commonContinue),
-          ),
-        ],
-      ),
-    );
-    if (proceed != true || !mounted) return;
-
-    final progressNotifier = ValueNotifier<ImportProgress>(
-      ImportProgress.idle.copyWith(running: true),
-    );
-    var dismissed = false;
-
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text(l.contactsImportTitle),
-          content: ValueListenableBuilder<ImportProgress>(
-            valueListenable: progressNotifier,
-            builder: (_, p, __) {
-              final value =
-                  (p.total > 0) ? (p.done / p.total).clamp(0.0, 1.0) : null;
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  LinearProgressIndicator(value: value),
-                  const SizedBox(height: 12),
-                  Text(
-                    p.total == 0
-                        ? L.of(context).contactsReadingBook
-                        : L.of(context).contactsChecking('${p.done}', '${p.total}'),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              );
-            },
-          ),
-        );
-      },
-    ).then((_) => dismissed = true);
-
-    try {
-      final result = await ref
-          .read(contactsListProvider.notifier)
-          .importFromAddressBook(
-            onProgress: (p) => progressNotifier.value = p,
-          );
-      if (!dismissed && mounted) {
-        rootNav.pop();
-      }
-      final msg = StringBuffer(
-        l.contactsFoundInMax('${result.found}', '${result.checked}'),
-      );
-      if (result.skipped > 0) {
-        msg.write('. Пропущено сверх лимита: ${result.skipped}');
-      }
-      messenger.showSnackBar(SnackBar(content: Text(msg.toString())));
-    } catch (e) {
-      if (!dismissed && mounted) {
-        rootNav.pop();
-      }
-      messenger.showSnackBar(SnackBar(content: Text(l.commonError('$e'))));
-    } finally {
-      progressNotifier.dispose();
-    }
-  }
-
   Future<void> _showAddDialog() async {
     final l = L.of(context);
     final ctrl = TextEditingController();
@@ -260,23 +376,23 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: Text(L.of(context).contactsFindByNumber),
+          title: Text(l.contactsFindByNumber),
           content: TextField(
             controller: ctrl,
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(
               hintText: '+79991234567',
-              labelText: L.of(context).contactsPhone,
+              labelText: l.contactsPhone,
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(L.of(context).commonCancel),
+              child: Text(l.commonCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
-              child: Text(L.of(context).commonFind),
+              child: Text(l.commonFind),
             ),
           ],
         );
@@ -296,155 +412,4 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
       messenger.showSnackBar(SnackBar(content: Text(l.commonError('$e'))));
     }
   }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({
-    required this.onAdd,
-    required this.onImport,
-    required this.isSearch,
-  });
-
-  final VoidCallback onAdd;
-  final VoidCallback onImport;
-  final bool isSearch;
-
-  @override
-  Widget build(BuildContext context) {
-    if (isSearch) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            L.of(context).commonNothingFound,
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    }
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              L.of(context).contactsEmpty,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: onImport,
-              icon: const Icon(Icons.cloud_download_outlined),
-              label: Text(L.of(context).contactsImport),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(Icons.person_add_alt),
-              label: Text(L.of(context).contactsAddByNumber),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GroupedContactsList extends StatelessWidget {
-  const _GroupedContactsList({
-    required this.items,
-    required this.onTap,
-    required this.onDelete,
-  });
-
-  final List<MaxContact> items;
-  final void Function(MaxContact) onTap;
-  final void Function(MaxContact) onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final groups = _groupByLetter(items);
-    final keys = groups.keys.toList();
-    final entries = <_ListEntry>[];
-    for (final k in keys) {
-      entries.add(_ListEntry.header(k));
-      for (final c in groups[k]!) {
-        entries.add(_ListEntry.contact(c));
-      }
-    }
-    return ListView.builder(
-      itemCount: entries.length,
-      itemBuilder: (ctx, i) {
-        final e = entries[i];
-        if (e.isHeader) {
-          return Container(
-            color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: Text(
-              e.header!,
-              style: Theme.of(ctx).textTheme.labelLarge,
-            ),
-          );
-        }
-        final c = e.contact!;
-        final initial =
-            (c.name?.isNotEmpty ?? false) ? c.name![0].toUpperCase() : '#';
-        return Dismissible(
-          key: ValueKey('contact-${c.id}'),
-          direction: DismissDirection.endToStart,
-          background: Container(
-            color: Theme.of(ctx).colorScheme.errorContainer,
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Icon(
-              Icons.delete,
-              color: Theme.of(ctx).colorScheme.onErrorContainer,
-            ),
-          ),
-          confirmDismiss: (_) async {
-            onDelete(c);
-            // Возвращаем false: подтверждение и удаление делаем сами,
-            // чтобы ListView сам перерисовался после обновления стейта.
-            return false;
-          },
-          child: ListTile(
-            leading: CircleAvatar(child: Text(initial)),
-            title: Text(c.name ?? c.phone ?? L.of(context).contactPlaceholder('${c.id}')),
-            subtitle: c.phone == null ? null : Text(c.phone!),
-            trailing: const Icon(Icons.chat_bubble_outline),
-            onTap: () => onTap(c),
-          ),
-        );
-      },
-    );
-  }
-
-  static Map<String, List<MaxContact>> _groupByLetter(List<MaxContact> all) {
-    final map = <String, List<MaxContact>>{};
-    for (final c in all) {
-      final n = c.name?.trim();
-      final key = (n != null && n.isNotEmpty)
-          ? n[0].toUpperCase()
-          : '#';
-      map.putIfAbsent(key, () => []).add(c);
-    }
-    final sortedKeys = map.keys.toList()
-      ..sort((a, b) {
-        if (a == '#') return 1;
-        if (b == '#') return -1;
-        return a.compareTo(b);
-      });
-    return {for (final k in sortedKeys) k: map[k]!};
-  }
-}
-
-class _ListEntry {
-  _ListEntry.header(this.header) : contact = null;
-  _ListEntry.contact(this.contact) : header = null;
-
-  final String? header;
-  final MaxContact? contact;
-
-  bool get isHeader => header != null;
 }

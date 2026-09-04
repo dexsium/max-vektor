@@ -77,6 +77,10 @@ class MaxOp {
   /// мобильного клиента — он только подтверждающий, QR сам не генерирует.
   static const int qrApprove = 290;
   static const int contactInfo = 32;
+
+  /// Обновление контакта, в т.ч. блокировка (wkc.CONTACT_UPDATE). Payload
+  /// `{contactId, action}`, action ∈ {BLOCK, UNBLOCK, REMOVE, ADD, UPDATE}.
+  static const int contactUpdate = 34;
   static const int contactByPhone = 46;
   static const int chatInfo = 48;
   static const int chatHistory = 49;
@@ -93,6 +97,17 @@ class MaxOp {
   static const int sessionsInfo = 96;
   static const int sessionsClose = 97;
   static const int twoFa = 115;
+
+  /// Детали 2FA залогиненного аккаунта (wkc.AUTH_2FA_DETAILS). Тот же опкод,
+  /// что [qrPoll], сервер различает по полям запроса: пустой payload → ответ
+  /// `{enabled, hint, email}` о текущем состоянии пароля входа.
+  static const int twoFaDetails = 104;
+
+  /// Установить/изменить пароль входа 2FA (wkc.AUTH_SET_2FA). Payload:
+  /// `{trackId, password, hint?, expectedCapabilities:[...]}`. trackId для
+  /// первичной установки — пустая строка. expectedCapabilities — байты фич,
+  /// которые клиент заявляет серверу (2 = RESTORE_PASSWORD, 3 = HINT).
+  static const int set2fa = 111;
   static const int notifAttach = 136;
   static const int transcribeMedia = 202;
   static const int notifTranscription = 293;

@@ -23,18 +23,12 @@ class AuthRepository {
   AuthRepository({
     required this.client,
     required this.storage,
-    this.onForeignUser,
     Logger? logger,
   }) : _log = logger ?? Logger();
 
   final MaxClient client;
   final SecureStorage storage;
   final Logger _log;
-
-  /// Вызывается, когда в этот слот вошёл ДРУГОЙ пользователь (server userId
-  /// не совпал с сохранённым). Реализация чистит локальную БД аккаунта, чтобы
-  /// не смешивать чаты прежнего владельца слота с новым.
-  final Future<void> Function()? onForeignUser;
 
   /// Каким устройством представляться при входе по номеру.
   ///
@@ -315,21 +309,9 @@ class AuthRepository {
     try {
       final me = await client.currentProfile();
       final id = me['id'];
-      if (id is int) {
-        // Владелец слота сменился? Тогда чистим локальные данные, иначе чаты
-        // прежнего номера подмешаются к новому (баг «из всех аккаунтов чаты»).
-        final prev = await storage.readMyUserId();
-        if (prev != null && prev != id) {
-          _log.i('${MvTag.auth} слот сменил владельца ($prev → $id) — '
-              'чищу локальные данные аккаунта');
-          try {
-            await onForeignUser?.call();
-          } catch (e) {
-            _log.w('${MvTag.auth} очистка локальных данных не удалась: $e');
-          }
-        }
-        await storage.writeMyUserId(id);
-      }
+      // Смена владельца слота (и очистка БД) обрабатывается в MaxClient.
+      // onLoginUser ДО записи чатов — здесь только фиксируем userId и имя.
+      if (id is int) await storage.writeMyUserId(id);
       final name = displayContactName(
         me.map((k, v) => MapEntry(k.toString(), v)),
       );

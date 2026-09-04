@@ -147,6 +147,9 @@ class LEn extends L {
   String get langTitle => 'App language';
 
   @override
+  String get langSystem => 'System language';
+
+  @override
   String get langHintSystem =>
       'You can change it in system settings — find “Language” there and pick one';
 
@@ -164,6 +167,58 @@ class LEn extends L {
 
   @override
   String get secPasswordSub => 'Two-factor protection';
+
+  @override
+  String get pwdTitle => 'Login password';
+
+  @override
+  String get pwdStateOn => 'Password set';
+
+  @override
+  String get pwdStateOff => 'Not set';
+
+  @override
+  String get pwdDesc => 'Required when signing in from a new device.';
+
+  @override
+  String get pwdNew => 'New password';
+
+  @override
+  String get pwdRepeat => 'Repeat password';
+
+  @override
+  String get pwdHintLabel => 'Hint (optional)';
+
+  @override
+  String get pwdHintDesc =>
+      'The hint appears on the login screen to help you remember the password.';
+
+  @override
+  String get pwdSave => 'Save';
+
+  @override
+  String get pwdSaving => 'Saving…';
+
+  @override
+  String get pwdSaved => 'Password saved';
+
+  @override
+  String get pwdMismatch => 'Passwords do not match';
+
+  @override
+  String pwdTooShort(int n) {
+    return 'At least $n characters';
+  }
+
+  @override
+  String pwdTooLong(int n) {
+    return 'At most $n characters';
+  }
+
+  @override
+  String pwdHintTooLong(int n) {
+    return 'Hint at most $n characters';
+  }
 
   @override
   String get secFamily => 'Family protection';
@@ -200,6 +255,25 @@ class LEn extends L {
 
   @override
   String get secBlacklistSub => 'Who can\'t message, call or add to chats';
+
+  @override
+  String get blEmpty => 'Blacklist is empty';
+
+  @override
+  String get blDesc =>
+      'Blocked people can’t message, call or add you to chats.';
+
+  @override
+  String get blUnblock => 'Unblock';
+
+  @override
+  String get blAdd => 'Block a contact';
+
+  @override
+  String get blNoContacts => 'No contacts to block';
+
+  @override
+  String get blSearch => 'Search';
 
   @override
   String get accessAll => 'everyone';
@@ -302,6 +376,9 @@ class LEn extends L {
 
   @override
   String get devOnline => 'Online';
+
+  @override
+  String get devUnknownDevice => 'Unknown device';
 
   @override
   String get devTerminate => 'Terminate';
@@ -549,6 +626,36 @@ class LEn extends L {
   @override
   String get contactsEmpty =>
       'No contacts. Import your address book or add a number manually.';
+
+  @override
+  String get contactsSectionInMax => 'On MAX';
+
+  @override
+  String get contactsSectionInvite => 'Invite to Max Vektor';
+
+  @override
+  String get contactsInviteBtn => 'Invite';
+
+  @override
+  String get contactsInviteCopied => 'Invitation copied';
+
+  @override
+  String get contactsNoAccessTitle => 'No access to contacts';
+
+  @override
+  String get contactsNoAccessSub =>
+      'Grant access to see which of your contacts are already on MAX.';
+
+  @override
+  String get contactsGrantAccess => 'Grant access';
+
+  @override
+  String get contactsSyncing => 'Syncing contacts…';
+
+  @override
+  String contactsInviteText(String name) {
+    return '$name, let’s chat on the MAX messenger!';
+  }
 
   @override
   String get callsCreate => 'Start a call';

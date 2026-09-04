@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../../state/locale_controller.dart';
 import '../../state/session_controller.dart';
 import '../../state/theme_controller.dart';
 import 'accounts_screen.dart';
@@ -120,7 +121,9 @@ class SettingsScreen extends ConsumerWidget {
               _Tile(
                 icon: Icons.language,
                 title: l.settingsLanguage,
-                subtitle: LanguageScreen.currentName(),
+                subtitle: ref.watch(localeProvider) == null
+                    ? l.langSystem
+                    : LanguageScreen.currentName(ref.watch(localeProvider)),
                 onTap: () => _push(context, const LanguageScreen()),
                 last: true,
               ),

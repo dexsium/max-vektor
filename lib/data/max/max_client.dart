@@ -54,6 +54,7 @@ class MaxClient {
     Logger? logger,
     this.deviceIdLoader,
     this.userAgentLoader,
+    this.onLoginUser,
   }) : _log = logger ?? Logger(printer: PrettyPrinter(methodCount: 0)) {
     _reconnect = _ReconnectManager(this, _log);
   }
@@ -71,6 +72,12 @@ class MaxClient {
   /// бросает — используется минимальный проверенный набор. См. DeviceProfile.
   final Future<Map<String, Object?>> Function(String deviceType, {String? seed})?
       userAgentLoader;
+
+  /// Вызывается при УСПЕШНОМ LOGIN с userId владельца сессии (из ответа op19,
+  /// profile.contact.id) — ДО того, как чаты из ответа попадут в БД. Реализация
+  /// сравнивает с сохранённым владельцем слота и, если он сменился, чистит БД —
+  /// иначе чаты прежнего владельца слота подмешиваются к новому.
+  final Future<void> Function(int? userId)? onLoginUser;
 
   /// Вызывается когда сервер отверг сохранённый токен (FAIL_LOGIN_TOKEN) —
   /// UI должен разлогинить и показать экран входа, а не висеть в reconnect.
@@ -705,6 +712,54 @@ class MaxClient {
     return t;
   }
 
+  /// Текущее состояние пароля входа (2FA) залогиненного аккаунта (op 104
+  /// AUTH_2FA_DETAILS). Ответ сервера — `{enabled, hint, email}`
+  /// (см. APK jd0). Пустой payload: запрос состояния, не QR-опрос.
+  Future<({bool enabled, String? hint, String? email})> get2faDetails() async {
+    final f = await _request(MaxOp.twoFaDetails, const {});
+    if (f.cmd != 1) _failWith(f, '2FA_DETAILS');
+    final d = _asMap(f.decoded);
+    String? str(String k) {
+      final v = d[k];
+      return (v is String && v.isNotEmpty) ? v : null;
+    }
+
+    return (
+      enabled: d['enabled'] == true,
+      hint: str('hint'),
+      email: str('email'),
+    );
+  }
+
+  /// Установить (или изменить) пароль входа — двухфакторную защиту
+  /// (op 111 AUTH_SET_2FA). Схема запроса из официального APK (gyb):
+  /// `{trackId, password, hint?, expectedCapabilities:[2, (3 если hint)]}`.
+  /// Для первичной установки [trackId] — пустая строка (в APK bundle-ключ
+  /// `creation_2fa_track_id_key` по умолчанию `""`). Байты фич:
+  /// 2 = RESTORE_PASSWORD, 3 = HINT (nhi из APK). Поле `remove2fa` НЕ шлём —
+  /// это установка, а не снятие пароля.
+  Future<void> setLoginPassword({
+    required String password,
+    String? hint,
+    String trackId = '',
+  }) async {
+    final trimmedHint = hint?.trim();
+    final hasHint = trimmedHint != null && trimmedHint.isNotEmpty;
+    final payload = <String, Object?>{
+      'trackId': trackId,
+      'password': password,
+      if (hasHint) 'hint': trimmedHint,
+      'expectedCapabilities': <int>[
+        2, // RESTORE_PASSWORD
+        if (hasHint) 3, // HINT
+      ],
+    };
+    final f = await _request(MaxOp.set2fa, payload);
+    _log.i('${MvTag.auth} SET_2FA → cmd=${f.cmd} '
+        'decoded=${_redact(f.decoded)}');
+    if (f.cmd != 1) _failWith(f, 'SET_2FA');
+  }
+
   /// Пометить сессию вошедшей БЕЗ отправки LOGIN (op 19).
   ///
   /// Интерактивная авторизация (код op 18, 2FA op 115, регистрация op 23)
@@ -803,6 +858,17 @@ class MaxClient {
         _token = rotated;
         _log.i('${MvTag.auth} LOGIN вернул новый токен — сохраняю для реконнекта '
             '(${mvRedact(rotated)})');
+      }
+      // ВЛАДЕЛЕЦ СЛОТА: userId из ответа LOGIN. Колбэк чистит БД, если слот
+      // сменил владельца — ДО записи чатов ниже, иначе чужие чаты подмешаются.
+      if (onLoginUser != null) {
+        int? userId;
+        final prof = dec['profile'];
+        if (prof is Map) {
+          final contact = prof['contact'];
+          if (contact is Map) userId = _toInt(contact['id']);
+        }
+        await onLoginUser!(userId);
       }
       final chats = dec['chats'];
       if (chats is List && chats.isNotEmpty) {
@@ -1036,14 +1102,16 @@ class MaxClient {
     return m;
   }
 
-  /// Завершить сессии (op 97 SESSIONS_CLOSE). [sessionId] — закрыть одну
-  /// конкретную; [exceptCurrent]=true — закрыть все, кроме текущей.
+  /// Завершить сессии (op 97 SESSIONS_CLOSE). [sessionTime] — закрыть одну
+  /// конкретную (сессия в этом протоколе идентифицируется временем последней
+  /// активности `time`, отдельного id нет — см. SESSIONS_INFO/hxf);
+  /// [exceptCurrent]=true — закрыть все, кроме текущей.
   Future<Map<String, dynamic>> closeSessions({
-    int? sessionId,
+    int? sessionTime,
     bool exceptCurrent = false,
   }) async {
     final payload = <String, Object?>{};
-    if (sessionId != null) payload['sessionId'] = sessionId;
+    if (sessionTime != null) payload['time'] = sessionTime;
     if (exceptCurrent) payload['exceptCurrent'] = true;
     final f = await _request(MaxOp.sessionsClose, payload);
     if (f.cmd != 1) throw MaxError('sessionsClose cmd=${f.cmd}');
@@ -1126,6 +1194,20 @@ class MaxClient {
     final f = await _request(MaxOp.contactInfo, {'contactIds': ids});
     if (f.cmd != 1) throw MaxError('contactInfo cmd=${f.cmd}');
     return _asMap(f.decoded);
+  }
+
+  /// Заблокировать/разблокировать контакт — чёрный список (op 34
+  /// CONTACT_UPDATE). Схема из APK (bp4/bw2): `{contactId, action}`, где
+  /// action = "BLOCK" | "UNBLOCK".
+  Future<void> setContactBlocked(int contactId,
+      {required bool blocked}) async {
+    final f = await _request(MaxOp.contactUpdate, {
+      'contactId': contactId,
+      'action': blocked ? 'BLOCK' : 'UNBLOCK',
+    });
+    _log.i('${MvTag.auth} CONTACT_UPDATE '
+        '${blocked ? 'BLOCK' : 'UNBLOCK'} id=$contactId → cmd=${f.cmd}');
+    if (f.cmd != 1) _failWith(f, 'CONTACT_UPDATE');
   }
 
   Future<Map<String, dynamic>> chatInfo(List<int> ids) async {

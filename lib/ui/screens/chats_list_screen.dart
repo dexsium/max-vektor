@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -170,7 +171,66 @@ class _ChatTile extends ConsumerWidget {
       MaxChatKind.group => Icons.groups_outlined,
       _ => chat.isGroup ? Icons.groups_outlined : null,
     };
-    return InkWell(
+    // Свайп-действия как в MAX: вправо — закрепить/прочитано, влево —
+    // без звука/удалить. Долгое нажатие оставляем как альтернативу.
+    return Slidable(
+      key: ValueKey('chat_${chat.id}'),
+      groupTag: 'chats',
+      startActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        extentRatio: chat.unreadCount > 0 ? 0.5 : 0.25,
+        children: [
+          SlidableAction(
+            onPressed: (_) => ref
+                .read(chatsListProvider.notifier)
+                .togglePin(chat.id, !chat.isPinned),
+            backgroundColor: const Color(0xFF2E7DF0),
+            foregroundColor: Colors.white,
+            icon: chat.isPinned
+                ? Icons.push_pin_outlined
+                : Icons.push_pin,
+            label: chat.isPinned
+                ? L.of(context).chatUnpin
+                : L.of(context).chatPin,
+          ),
+          if (chat.unreadCount > 0)
+            SlidableAction(
+              onPressed: (_) =>
+                  ref.read(chatsListProvider.notifier).markRead(chat.id),
+              backgroundColor: const Color(0xFF34C759),
+              foregroundColor: Colors.white,
+              icon: Icons.mark_chat_read_outlined,
+              label: L.of(context).chatMarkRead,
+            ),
+        ],
+      ),
+      endActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        extentRatio: 0.5,
+        children: [
+          SlidableAction(
+            onPressed: (_) => ref
+                .read(chatsListProvider.notifier)
+                .toggleMute(chat.id, !chat.isMuted),
+            backgroundColor: const Color(0xFF8E8E93),
+            foregroundColor: Colors.white,
+            icon: chat.isMuted
+                ? Icons.notifications_active_outlined
+                : Icons.notifications_off_outlined,
+            label: chat.isMuted
+                ? L.of(context).chatEnableNotif
+                : L.of(context).chatDisableNotif,
+          ),
+          SlidableAction(
+            onPressed: (_) => _confirmDelete(context, ref, chat),
+            backgroundColor: const Color(0xFFFF3B30),
+            foregroundColor: Colors.white,
+            icon: Icons.delete_outline,
+            label: L.of(context).commonDelete,
+          ),
+        ],
+      ),
+      child: InkWell(
       onLongPress: () => _showActions(context, ref, chat),
       onTap: () async {
         // Запоминаем непрочитанные ДО сброса — для разделителя «Новые сообщения».
@@ -296,7 +356,37 @@ class _ChatTile extends ConsumerWidget {
           ],
         ),
       ),
+      ),
     );
+  }
+
+  /// Подтверждение удаления чата (свайп «Удалить»).
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    MaxChat c,
+  ) async {
+    final l = L.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('${l.commonDelete}?'),
+        content: Text(c.title ?? l.chatTitlePlaceholder('${c.id}')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l.commonDelete),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await ref.read(chatsListProvider.notifier).deleteChat(c.id);
+    }
   }
 
   Future<void> _showActions(

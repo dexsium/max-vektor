@@ -149,6 +149,9 @@ class LIt extends L {
   String get langTitle => 'Lingua dell\'app';
 
   @override
+  String get langSystem => 'Lingua di sistema';
+
+  @override
   String get langHintSystem =>
       'Puoi cambiarla nelle impostazioni di sistema — cerca «Lingua» e scegline una';
 
@@ -166,6 +169,58 @@ class LIt extends L {
 
   @override
   String get secPasswordSub => 'Protezione a due fattori';
+
+  @override
+  String get pwdTitle => 'Password di accesso';
+
+  @override
+  String get pwdStateOn => 'Password impostata';
+
+  @override
+  String get pwdStateOff => 'Non impostata';
+
+  @override
+  String get pwdDesc => 'Richiesta all\'accesso da un nuovo dispositivo.';
+
+  @override
+  String get pwdNew => 'Nuova password';
+
+  @override
+  String get pwdRepeat => 'Ripeti la password';
+
+  @override
+  String get pwdHintLabel => 'Suggerimento (facoltativo)';
+
+  @override
+  String get pwdHintDesc =>
+      'Il suggerimento appare nella schermata di accesso per aiutarti a ricordare la password.';
+
+  @override
+  String get pwdSave => 'Salva';
+
+  @override
+  String get pwdSaving => 'Salvataggio…';
+
+  @override
+  String get pwdSaved => 'Password salvata';
+
+  @override
+  String get pwdMismatch => 'Le password non coincidono';
+
+  @override
+  String pwdTooShort(int n) {
+    return 'Almeno $n caratteri';
+  }
+
+  @override
+  String pwdTooLong(int n) {
+    return 'Al massimo $n caratteri';
+  }
+
+  @override
+  String pwdHintTooLong(int n) {
+    return 'Suggerimento al massimo $n caratteri';
+  }
 
   @override
   String get secFamily => 'Protezione famiglia';
@@ -203,6 +258,25 @@ class LIt extends L {
   @override
   String get secBlacklistSub =>
       'Chi non può scrivere, chiamare o aggiungere alle chat';
+
+  @override
+  String get blEmpty => 'La lista nera è vuota';
+
+  @override
+  String get blDesc =>
+      'Le persone bloccate non possono scriverti, chiamarti o aggiungerti alle chat.';
+
+  @override
+  String get blUnblock => 'Sblocca';
+
+  @override
+  String get blAdd => 'Blocca un contatto';
+
+  @override
+  String get blNoContacts => 'Nessun contatto da bloccare';
+
+  @override
+  String get blSearch => 'Cerca';
 
   @override
   String get accessAll => 'tutti';
@@ -307,6 +381,9 @@ class LIt extends L {
 
   @override
   String get devOnline => 'Online';
+
+  @override
+  String get devUnknownDevice => 'Dispositivo sconosciuto';
 
   @override
   String get devTerminate => 'Termina';
@@ -555,6 +632,36 @@ class LIt extends L {
   @override
   String get contactsEmpty =>
       'Nessun contatto. Importa la rubrica o aggiungi un numero manualmente.';
+
+  @override
+  String get contactsSectionInMax => 'Su MAX';
+
+  @override
+  String get contactsSectionInvite => 'Invita su Max Vektor';
+
+  @override
+  String get contactsInviteBtn => 'Invita';
+
+  @override
+  String get contactsInviteCopied => 'Invito copiato';
+
+  @override
+  String get contactsNoAccessTitle => 'Nessun accesso ai contatti';
+
+  @override
+  String get contactsNoAccessSub =>
+      'Concedi l’accesso per vedere quali dei tuoi contatti sono già su MAX.';
+
+  @override
+  String get contactsGrantAccess => 'Concedi accesso';
+
+  @override
+  String get contactsSyncing => 'Sincronizzazione contatti…';
+
+  @override
+  String contactsInviteText(String name) {
+    return '$name, chattiamo sul messenger MAX!';
+  }
 
   @override
   String get callsCreate => 'Avvia chiamata';

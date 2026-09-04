@@ -149,6 +149,9 @@ class LTr extends L {
   String get langTitle => 'Uygulama dili';
 
   @override
+  String get langSystem => 'Sistem dili';
+
+  @override
   String get langHintSystem =>
       'Sistem ayarlarından değiştirebilirsin — orada «Dil»\'i bul ve birini seç';
 
@@ -166,6 +169,58 @@ class LTr extends L {
 
   @override
   String get secPasswordSub => 'İki adımlı koruma';
+
+  @override
+  String get pwdTitle => 'Giriş parolası';
+
+  @override
+  String get pwdStateOn => 'Parola ayarlandı';
+
+  @override
+  String get pwdStateOff => 'Ayarlanmadı';
+
+  @override
+  String get pwdDesc => 'Yeni bir cihazdan giriş yaparken istenir.';
+
+  @override
+  String get pwdNew => 'Yeni parola';
+
+  @override
+  String get pwdRepeat => 'Parolayı tekrarlayın';
+
+  @override
+  String get pwdHintLabel => 'İpucu (isteğe bağlı)';
+
+  @override
+  String get pwdHintDesc =>
+      'İpucu, parolayı hatırlamanıza yardımcı olmak için giriş ekranında görünür.';
+
+  @override
+  String get pwdSave => 'Kaydet';
+
+  @override
+  String get pwdSaving => 'Kaydediliyor…';
+
+  @override
+  String get pwdSaved => 'Parola kaydedildi';
+
+  @override
+  String get pwdMismatch => 'Parolalar eşleşmiyor';
+
+  @override
+  String pwdTooShort(int n) {
+    return 'En az $n karakter';
+  }
+
+  @override
+  String pwdTooLong(int n) {
+    return 'En fazla $n karakter';
+  }
+
+  @override
+  String pwdHintTooLong(int n) {
+    return 'İpucu en fazla $n karakter';
+  }
 
   @override
   String get secFamily => 'Aile koruması';
@@ -202,6 +257,25 @@ class LTr extends L {
 
   @override
   String get secBlacklistSub => 'Kimler yazamaz, arayamaz ve sohbete ekleyemez';
+
+  @override
+  String get blEmpty => 'Kara liste boş';
+
+  @override
+  String get blDesc =>
+      'Engellenen kişiler size mesaj atamaz, arayamaz veya sizi sohbetlere ekleyemez.';
+
+  @override
+  String get blUnblock => 'Engeli kaldır';
+
+  @override
+  String get blAdd => 'Kişiyi engelle';
+
+  @override
+  String get blNoContacts => 'Engellenecek kişi yok';
+
+  @override
+  String get blSearch => 'Ara';
 
   @override
   String get accessAll => 'herkes';
@@ -304,6 +378,9 @@ class LTr extends L {
 
   @override
   String get devOnline => 'Çevrimiçi';
+
+  @override
+  String get devUnknownDevice => 'Bilinmeyen cihaz';
 
   @override
   String get devTerminate => 'Sonlandır';
@@ -551,6 +628,36 @@ class LTr extends L {
   @override
   String get contactsEmpty =>
       'Kişi yok. Rehberini içe aktar veya numarayı elle ekle.';
+
+  @override
+  String get contactsSectionInMax => 'MAX’ta';
+
+  @override
+  String get contactsSectionInvite => 'Max Vektor’a davet et';
+
+  @override
+  String get contactsInviteBtn => 'Davet et';
+
+  @override
+  String get contactsInviteCopied => 'Davet kopyalandı';
+
+  @override
+  String get contactsNoAccessTitle => 'Kişilere erişim yok';
+
+  @override
+  String get contactsNoAccessSub =>
+      'Hangi kişilerinizin zaten MAX’ta olduğunu görmek için erişime izin verin.';
+
+  @override
+  String get contactsGrantAccess => 'Erişime izin ver';
+
+  @override
+  String get contactsSyncing => 'Kişiler eşitleniyor…';
+
+  @override
+  String contactsInviteText(String name) {
+    return '$name, MAX mesajlaşma uygulamasında sohbet edelim!';
+  }
 
   @override
   String get callsCreate => 'Arama başlat';

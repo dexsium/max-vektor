@@ -151,6 +151,9 @@ class LFr extends L {
   String get langTitle => 'Langue de l\'app';
 
   @override
+  String get langSystem => 'Langue du système';
+
+  @override
   String get langHintSystem =>
       'Vous pouvez la changer dans les réglages système — cherchez « Langue » et choisissez-en une';
 
@@ -168,6 +171,59 @@ class LFr extends L {
 
   @override
   String get secPasswordSub => 'Protection à deux facteurs';
+
+  @override
+  String get pwdTitle => 'Mot de passe de connexion';
+
+  @override
+  String get pwdStateOn => 'Mot de passe défini';
+
+  @override
+  String get pwdStateOff => 'Non défini';
+
+  @override
+  String get pwdDesc =>
+      'Demandé lors de la connexion depuis un nouvel appareil.';
+
+  @override
+  String get pwdNew => 'Nouveau mot de passe';
+
+  @override
+  String get pwdRepeat => 'Répéter le mot de passe';
+
+  @override
+  String get pwdHintLabel => 'Indice (facultatif)';
+
+  @override
+  String get pwdHintDesc =>
+      'L\'indice apparaît sur l\'écran de connexion pour vous aider à retenir le mot de passe.';
+
+  @override
+  String get pwdSave => 'Enregistrer';
+
+  @override
+  String get pwdSaving => 'Enregistrement…';
+
+  @override
+  String get pwdSaved => 'Mot de passe enregistré';
+
+  @override
+  String get pwdMismatch => 'Les mots de passe ne correspondent pas';
+
+  @override
+  String pwdTooShort(int n) {
+    return 'Au moins $n caractères';
+  }
+
+  @override
+  String pwdTooLong(int n) {
+    return 'Au plus $n caractères';
+  }
+
+  @override
+  String pwdHintTooLong(int n) {
+    return 'Indice au plus $n caractères';
+  }
 
   @override
   String get secFamily => 'Protection familiale';
@@ -205,6 +261,25 @@ class LFr extends L {
   @override
   String get secBlacklistSub =>
       'Qui ne peut pas écrire, appeler ni ajouter à des chats';
+
+  @override
+  String get blEmpty => 'La liste noire est vide';
+
+  @override
+  String get blDesc =>
+      'Les personnes bloquées ne peuvent pas vous écrire, vous appeler ni vous ajouter à des discussions.';
+
+  @override
+  String get blUnblock => 'Débloquer';
+
+  @override
+  String get blAdd => 'Bloquer un contact';
+
+  @override
+  String get blNoContacts => 'Aucun contact à bloquer';
+
+  @override
+  String get blSearch => 'Rechercher';
 
   @override
   String get accessAll => 'tout le monde';
@@ -309,6 +384,9 @@ class LFr extends L {
 
   @override
   String get devOnline => 'En ligne';
+
+  @override
+  String get devUnknownDevice => 'Appareil inconnu';
 
   @override
   String get devTerminate => 'Fermer';
@@ -556,6 +634,36 @@ class LFr extends L {
   @override
   String get contactsEmpty =>
       'Aucun contact. Importez votre carnet d\'adresses ou ajoutez un numéro manuellement.';
+
+  @override
+  String get contactsSectionInMax => 'Sur MAX';
+
+  @override
+  String get contactsSectionInvite => 'Inviter sur Max Vektor';
+
+  @override
+  String get contactsInviteBtn => 'Inviter';
+
+  @override
+  String get contactsInviteCopied => 'Invitation copiée';
+
+  @override
+  String get contactsNoAccessTitle => 'Aucun accès aux contacts';
+
+  @override
+  String get contactsNoAccessSub =>
+      'Autorisez l’accès pour voir lesquels de vos contacts sont déjà sur MAX.';
+
+  @override
+  String get contactsGrantAccess => 'Autoriser l’accès';
+
+  @override
+  String get contactsSyncing => 'Synchronisation des contacts…';
+
+  @override
+  String contactsInviteText(String name) {
+    return '$name, discutons sur la messagerie MAX !';
+  }
 
   @override
   String get callsCreate => 'Démarrer un appel';

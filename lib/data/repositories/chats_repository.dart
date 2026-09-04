@@ -81,6 +81,9 @@ class ChatsRepository {
 
   Future<void> markRead(int chatId) => db.resetUnread(chatId);
 
+  /// Локально удалить чат (свайп «Удалить» в списке).
+  Future<void> deleteChat(int chatId) => db.deleteChat(chatId);
+
   /// Сохранить/обновить группы и каналы, пришедшие в синке чатов (op 19).
   ///
   /// Диалоги 1:1 сюда НЕ попадают намеренно: их локальная строка может быть

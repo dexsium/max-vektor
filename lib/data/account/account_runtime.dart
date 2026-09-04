@@ -30,14 +30,25 @@ class AccountRuntime {
       // ключ в Keychain содержит accountId (см. SecureStorage).
       deviceIdLoader: storage.readOrCreateDeviceId,
       userAgentLoader: DeviceProfile.userAgent,
+      // Владелец слота из ответа LOGIN. Если сменился (вошли другим номером в
+      // тот же слот после «сессия истекла») — чистим БД ДО записи новых чатов,
+      // иначе чаты прежнего владельца подмешиваются. Вызывается на каждом
+      // LOGIN; при том же владельце ничего не делает.
+      onLoginUser: (userId) async {
+        if (userId == null) return;
+        final prev = await storage.readMyUserId();
+        if (prev != null && prev != userId) {
+          _log.i('${MvTag.auth} слот сменил владельца ($prev → $userId) — '
+              'чищу локальные данные аккаунта');
+          await (await database()).clearConversationData();
+        }
+        await storage.writeMyUserId(userId);
+      },
     );
     auth = AuthRepository(
       client: client,
       storage: storage,
       logger: _log,
-      // Слот сменил владельца (вошли другим номером) → чистим БД аккаунта,
-      // чтобы чаты прежнего владельца не подмешивались.
-      onForeignUser: () async => (await database()).clearConversationData(),
     );
   }
 

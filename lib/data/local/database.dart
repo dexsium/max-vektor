@@ -32,7 +32,7 @@ class AppDatabase {
     final path = p.join(dir.path, AppMeta.dbNameFor(accountId));
     final db = await openDatabase(
       path,
-      version: 11,
+      version: 13,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -121,6 +121,22 @@ class AppDatabase {
     if (oldVersion < 11) {
       // id автора сообщения-цитаты (link.type=REPLY) — для имени над цитатой.
       await db.execute('ALTER TABLE messages ADD COLUMN reply_from_id INTEGER');
+    }
+    if (oldVersion < 12) {
+      // Чёрный список: флаг блокировки контакта (op 34 action=BLOCK).
+      await db.execute(
+          'ALTER TABLE contacts ADD COLUMN blocked INTEGER NOT NULL DEFAULT 0');
+    }
+    if (oldVersion < 13) {
+      // Номера из адресной книги, уже проверенные в MAX (op 46). Нужны, чтобы
+      // не перепроверять их при каждом заходе в «Контакты» — массовый резолв
+      // это анти-бан-сигнал, поэтому каждый номер резолвим не более раза.
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS checked_phones (
+          phone TEXT PRIMARY KEY,
+          checked_at INTEGER NOT NULL
+        )
+      ''');
     }
   }
 
@@ -220,7 +236,8 @@ class AppDatabase {
         id INTEGER PRIMARY KEY,
         name TEXT,
         phone TEXT,
-        avatar_url TEXT
+        avatar_url TEXT,
+        blocked INTEGER NOT NULL DEFAULT 0
       )
     ''');
 
@@ -228,6 +245,13 @@ class AppDatabase {
       CREATE TABLE processed_message_ids (
         id INTEGER PRIMARY KEY,
         seen_at INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE checked_phones (
+        phone TEXT PRIMARY KEY,
+        checked_at INTEGER NOT NULL
       )
     ''');
 
@@ -358,6 +382,17 @@ class AppDatabase {
       where: 'id = ?',
       whereArgs: [chatId],
     );
+  }
+
+  /// Локально удалить один чат: сам чат, его сообщения, вложения и очередь.
+  /// Только этот chatId — данные других чатов/аккаунтов не трогаем.
+  Future<void> deleteChat(int chatId) async {
+    await _db.transaction((txn) async {
+      await txn.delete('messages', where: 'chat_id = ?', whereArgs: [chatId]);
+      await txn.delete('attachments', where: 'chat_id = ?', whereArgs: [chatId]);
+      await txn.delete('outbox', where: 'chat_id = ?', whereArgs: [chatId]);
+      await txn.delete('chats', where: 'id = ?', whereArgs: [chatId]);
+    });
   }
 
   // ──────────────────────── messages ───────────────────────
@@ -505,11 +540,52 @@ class AppDatabase {
   }
 
   Future<void> upsertContact(MaxContact c) async {
-    await _db.insert(
-      'contacts',
-      c.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
+    // ON CONFLICT DO UPDATE вместо REPLACE: обновляем только профиль, но НЕ
+    // трогаем blocked — иначе синк CONTACT_INFO сбрасывал бы чёрный список.
+    await _db.rawInsert(
+      'INSERT INTO contacts(id, name, phone, avatar_url) VALUES(?, ?, ?, ?) '
+      'ON CONFLICT(id) DO UPDATE SET '
+      'name = excluded.name, phone = excluded.phone, '
+      'avatar_url = excluded.avatar_url',
+      [c.id, c.name, c.phone, c.avatarUrl],
     );
+  }
+
+  /// Список заблокированных контактов (чёрный список).
+  Future<List<MaxContact>> blockedContacts() async {
+    final rows = await _db.query(
+      'contacts',
+      where: 'blocked = 1',
+      orderBy: 'name COLLATE NOCASE',
+    );
+    return rows.map(MaxContact.fromDbRow).toList();
+  }
+
+  /// Пометить контакт заблокированным/разблокированным локально. Если контакта
+  /// ещё нет в таблице — заводим минимальную строку (например, при блокировке
+  /// собеседника, которого нет в адресной книге).
+  Future<void> setContactBlocked(
+    int id, {
+    required bool blocked,
+    String? name,
+    String? phone,
+    String? avatarUrl,
+  }) async {
+    final n = await _db.update(
+      'contacts',
+      {'blocked': blocked ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (n == 0) {
+      await _db.insert('contacts', {
+        'id': id,
+        'name': name,
+        'phone': phone,
+        'avatar_url': avatarUrl,
+        'blocked': blocked ? 1 : 0,
+      });
+    }
   }
 
   Future<void> deleteContact(int id) async {
@@ -518,6 +594,27 @@ class AppDatabase {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  /// Множество номеров (в каноничном виде), уже проверенных в MAX — чтобы не
+  /// перепроверять их повторно при заходе в «Контакты».
+  Future<Set<String>> checkedPhones() async {
+    final rows = await _db.query('checked_phones', columns: ['phone']);
+    return {for (final r in rows) r['phone'] as String};
+  }
+
+  Future<void> markPhonesChecked(Iterable<String> phones) async {
+    if (phones.isEmpty) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final batch = _db.batch();
+    for (final p in phones) {
+      batch.insert(
+        'checked_phones',
+        {'phone': p, 'checked_at': now},
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
   }
 
   Future<List<MaxContact>> searchContacts(String query) async {

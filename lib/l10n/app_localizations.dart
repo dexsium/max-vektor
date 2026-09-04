@@ -381,6 +381,12 @@ abstract class L {
   /// **'Язык приложения'**
   String get langTitle;
 
+  /// No description provided for @langSystem.
+  ///
+  /// In ru, this message translates to:
+  /// **'Системный язык'**
+  String get langSystem;
+
   /// No description provided for @langHintSystem.
   ///
   /// In ru, this message translates to:
@@ -416,6 +422,96 @@ abstract class L {
   /// In ru, this message translates to:
   /// **'Двухфакторная защита'**
   String get secPasswordSub;
+
+  /// No description provided for @pwdTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пароль для входа'**
+  String get pwdTitle;
+
+  /// No description provided for @pwdStateOn.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пароль установлен'**
+  String get pwdStateOn;
+
+  /// No description provided for @pwdStateOff.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не установлен'**
+  String get pwdStateOff;
+
+  /// No description provided for @pwdDesc.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пароль запрашивается при входе с нового устройства.'**
+  String get pwdDesc;
+
+  /// No description provided for @pwdNew.
+  ///
+  /// In ru, this message translates to:
+  /// **'Новый пароль'**
+  String get pwdNew;
+
+  /// No description provided for @pwdRepeat.
+  ///
+  /// In ru, this message translates to:
+  /// **'Повторите пароль'**
+  String get pwdRepeat;
+
+  /// No description provided for @pwdHintLabel.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подсказка (необязательно)'**
+  String get pwdHintLabel;
+
+  /// No description provided for @pwdHintDesc.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подсказка видна на экране входа и поможет вспомнить пароль.'**
+  String get pwdHintDesc;
+
+  /// No description provided for @pwdSave.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сохранить'**
+  String get pwdSave;
+
+  /// No description provided for @pwdSaving.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сохранение…'**
+  String get pwdSaving;
+
+  /// No description provided for @pwdSaved.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пароль сохранён'**
+  String get pwdSaved;
+
+  /// No description provided for @pwdMismatch.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пароли не совпадают'**
+  String get pwdMismatch;
+
+  /// No description provided for @pwdTooShort.
+  ///
+  /// In ru, this message translates to:
+  /// **'Минимум {n} символов'**
+  String pwdTooShort(int n);
+
+  /// No description provided for @pwdTooLong.
+  ///
+  /// In ru, this message translates to:
+  /// **'Максимум {n} символов'**
+  String pwdTooLong(int n);
+
+  /// No description provided for @pwdHintTooLong.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подсказка не длиннее {n} символов'**
+  String pwdHintTooLong(int n);
 
   /// No description provided for @secFamily.
   ///
@@ -488,6 +584,42 @@ abstract class L {
   /// In ru, this message translates to:
   /// **'Кто не может писать, звонить и добавлять в чаты'**
   String get secBlacklistSub;
+
+  /// No description provided for @blEmpty.
+  ///
+  /// In ru, this message translates to:
+  /// **'Чёрный список пуст'**
+  String get blEmpty;
+
+  /// No description provided for @blDesc.
+  ///
+  /// In ru, this message translates to:
+  /// **'Заблокированные не могут писать вам, звонить и добавлять в чаты.'**
+  String get blDesc;
+
+  /// No description provided for @blUnblock.
+  ///
+  /// In ru, this message translates to:
+  /// **'Разблокировать'**
+  String get blUnblock;
+
+  /// No description provided for @blAdd.
+  ///
+  /// In ru, this message translates to:
+  /// **'Заблокировать контакт'**
+  String get blAdd;
+
+  /// No description provided for @blNoContacts.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет контактов для блокировки'**
+  String get blNoContacts;
+
+  /// No description provided for @blSearch.
+  ///
+  /// In ru, this message translates to:
+  /// **'Поиск'**
+  String get blSearch;
 
   /// No description provided for @accessAll.
   ///
@@ -692,6 +824,12 @@ abstract class L {
   /// In ru, this message translates to:
   /// **'В сети'**
   String get devOnline;
+
+  /// No description provided for @devUnknownDevice.
+  ///
+  /// In ru, this message translates to:
+  /// **'Неизвестное устройство'**
+  String get devUnknownDevice;
 
   /// No description provided for @devTerminate.
   ///
@@ -1136,6 +1274,60 @@ abstract class L {
   /// In ru, this message translates to:
   /// **'Контактов нет. Импортируйте адресную книгу или добавьте номер вручную.'**
   String get contactsEmpty;
+
+  /// No description provided for @contactsSectionInMax.
+  ///
+  /// In ru, this message translates to:
+  /// **'В Максе'**
+  String get contactsSectionInMax;
+
+  /// No description provided for @contactsSectionInvite.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пригласить в Max Vektor'**
+  String get contactsSectionInvite;
+
+  /// No description provided for @contactsInviteBtn.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пригласить'**
+  String get contactsInviteBtn;
+
+  /// No description provided for @contactsInviteCopied.
+  ///
+  /// In ru, this message translates to:
+  /// **'Приглашение скопировано'**
+  String get contactsInviteCopied;
+
+  /// No description provided for @contactsNoAccessTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет доступа к контактам'**
+  String get contactsNoAccessTitle;
+
+  /// No description provided for @contactsNoAccessSub.
+  ///
+  /// In ru, this message translates to:
+  /// **'Разрешите доступ, чтобы видеть, кто из ваших контактов уже в MAX.'**
+  String get contactsNoAccessSub;
+
+  /// No description provided for @contactsGrantAccess.
+  ///
+  /// In ru, this message translates to:
+  /// **'Разрешить доступ'**
+  String get contactsGrantAccess;
+
+  /// No description provided for @contactsSyncing.
+  ///
+  /// In ru, this message translates to:
+  /// **'Синхронизация контактов…'**
+  String get contactsSyncing;
+
+  /// No description provided for @contactsInviteText.
+  ///
+  /// In ru, this message translates to:
+  /// **'{name}, давай общаться в мессенджере MAX!'**
+  String contactsInviteText(String name);
 
   /// No description provided for @callsCreate.
   ///

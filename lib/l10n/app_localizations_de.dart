@@ -149,6 +149,9 @@ class LDe extends L {
   String get langTitle => 'App-Sprache';
 
   @override
+  String get langSystem => 'Systemsprache';
+
+  @override
   String get langHintSystem =>
       'Änderbar in den Systemeinstellungen — suche dort „Sprache“ und wähle eine aus';
 
@@ -166,6 +169,59 @@ class LDe extends L {
 
   @override
   String get secPasswordSub => 'Zwei-Faktor-Schutz';
+
+  @override
+  String get pwdTitle => 'Login-Passwort';
+
+  @override
+  String get pwdStateOn => 'Passwort festgelegt';
+
+  @override
+  String get pwdStateOff => 'Nicht festgelegt';
+
+  @override
+  String get pwdDesc =>
+      'Wird bei der Anmeldung auf einem neuen Gerät abgefragt.';
+
+  @override
+  String get pwdNew => 'Neues Passwort';
+
+  @override
+  String get pwdRepeat => 'Passwort wiederholen';
+
+  @override
+  String get pwdHintLabel => 'Hinweis (optional)';
+
+  @override
+  String get pwdHintDesc =>
+      'Der Hinweis erscheint im Anmeldebildschirm und hilft, das Passwort zu erinnern.';
+
+  @override
+  String get pwdSave => 'Speichern';
+
+  @override
+  String get pwdSaving => 'Speichern…';
+
+  @override
+  String get pwdSaved => 'Passwort gespeichert';
+
+  @override
+  String get pwdMismatch => 'Passwörter stimmen nicht überein';
+
+  @override
+  String pwdTooShort(int n) {
+    return 'Mindestens $n Zeichen';
+  }
+
+  @override
+  String pwdTooLong(int n) {
+    return 'Höchstens $n Zeichen';
+  }
+
+  @override
+  String pwdHintTooLong(int n) {
+    return 'Hinweis höchstens $n Zeichen';
+  }
 
   @override
   String get secFamily => 'Familienschutz';
@@ -203,6 +259,25 @@ class LDe extends L {
   @override
   String get secBlacklistSub =>
       'Wer nicht schreiben, anrufen oder zu Chats hinzufügen darf';
+
+  @override
+  String get blEmpty => 'Sperrliste ist leer';
+
+  @override
+  String get blDesc =>
+      'Gesperrte Personen können dir nicht schreiben, anrufen oder dich zu Chats hinzufügen.';
+
+  @override
+  String get blUnblock => 'Entsperren';
+
+  @override
+  String get blAdd => 'Kontakt sperren';
+
+  @override
+  String get blNoContacts => 'Keine Kontakte zum Sperren';
+
+  @override
+  String get blSearch => 'Suchen';
 
   @override
   String get accessAll => 'alle';
@@ -307,6 +382,9 @@ class LDe extends L {
 
   @override
   String get devOnline => 'Online';
+
+  @override
+  String get devUnknownDevice => 'Unbekanntes Gerät';
 
   @override
   String get devTerminate => 'Beenden';
@@ -555,6 +633,36 @@ class LDe extends L {
   @override
   String get contactsEmpty =>
       'Keine Kontakte. Importiere dein Adressbuch oder füge eine Nummer manuell hinzu.';
+
+  @override
+  String get contactsSectionInMax => 'Bei MAX';
+
+  @override
+  String get contactsSectionInvite => 'Zu Max Vektor einladen';
+
+  @override
+  String get contactsInviteBtn => 'Einladen';
+
+  @override
+  String get contactsInviteCopied => 'Einladung kopiert';
+
+  @override
+  String get contactsNoAccessTitle => 'Kein Zugriff auf Kontakte';
+
+  @override
+  String get contactsNoAccessSub =>
+      'Erlaube den Zugriff, um zu sehen, welche deiner Kontakte schon bei MAX sind.';
+
+  @override
+  String get contactsGrantAccess => 'Zugriff erlauben';
+
+  @override
+  String get contactsSyncing => 'Kontakte werden synchronisiert…';
+
+  @override
+  String contactsInviteText(String name) {
+    return '$name, lass uns im MAX-Messenger chatten!';
+  }
 
   @override
   String get callsCreate => 'Anruf starten';

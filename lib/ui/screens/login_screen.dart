@@ -7,10 +7,12 @@ import '../../core/constants.dart';
 import '../../core/countries.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../../state/locale_controller.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../state/session_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/code_input.dart';
+import '../widgets/language_picker.dart';
 import '../widgets/vektor_mark.dart';
 import 'diagnostics_screen.dart';
 
@@ -99,9 +101,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Верхний ряд: назад (если это добавление аккаунта) слева и
-              // шестерёнка справа → «Диагностика» (лог нужен и на экране входа:
-              // после вылета настройки недоступны, а причину видно в логе).
+              // Верхний ряд: слева глобус → смена языка прямо в приложении
+              // (и «назад», если это добавление аккаунта); справа шестерёнка →
+              // «Диагностика» (лог нужен и на экране входа: после вылета
+              // настройки недоступны, а причину видно в логе).
               Row(
                 children: [
                   if (canCancel)
@@ -110,6 +113,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       icon: const Icon(Icons.arrow_back, color: Colors.white70),
                       onPressed: _busy ? null : () => ctrl.cancelAddAccount(),
                     ),
+                  IconButton(
+                    tooltip: L.of(context).langTitle,
+                    icon: const Icon(Icons.language, color: Colors.white70),
+                    onPressed: _busy ? null : _pickLanguage,
+                  ),
                   const Spacer(),
                   IconButton(
                     tooltip: L.of(context).settingsDiagnostics,
@@ -123,35 +131,56 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ],
               ),
+              // Контент поднят к верху, а поле ввода тяготеет к центру экрана:
+              // Spacer'ы распределяют свободное место, а при появлении
+              // клавиатуры IntrinsicHeight+прокрутка не дают контенту обрезаться.
               Expanded(
-                child: Center(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(24, canCancel ? 8 : 32, 24, 32),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 420),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _header(step),
-                          const SizedBox(height: 28),
-                          if (session.error != null) ...[
-                            _ErrorBanner(text: session.error!),
-                            const SizedBox(height: 16),
-                          ],
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 220),
-                            child: Column(
-                              key: ValueKey(step),
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: _body(step, session, ctrl),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints:
+                            BoxConstraints(minHeight: constraints.maxHeight),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints:
+                                  const BoxConstraints(maxWidth: 420),
+                              child: IntrinsicHeight(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    SizedBox(height: canCancel ? 8 : 16),
+                                    _header(step),
+                                    if (session.error != null) ...[
+                                      const SizedBox(height: 20),
+                                      _ErrorBanner(text: session.error!),
+                                    ],
+                                    const Spacer(flex: 2),
+                                    AnimatedSwitcher(
+                                      duration:
+                                          const Duration(milliseconds: 220),
+                                      child: Column(
+                                        key: ValueKey(step),
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: _body(step, session, ctrl),
+                                      ),
+                                    ),
+                                    const Spacer(flex: 3),
+                                    _footer(step, ctrl),
+                                    const SizedBox(height: 12),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 24),
-                          _footer(step, ctrl),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -175,7 +204,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Widget _header(_Step step) {
     final isPhone = step == _Step.phone;
-    final logoSize = isPhone ? 200.0 : 96.0;
+    final logoSize = isPhone ? 150.0 : 96.0;
     return Column(
       children: [
         // У PNG-логотипа собственное свечение — показываем как есть.
@@ -294,6 +323,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         onPressed: () => _run(() => ctrl.requestSms(_fullPhone())),
       ),
     ];
+  }
+
+  /// Смена языка интерфейса прямо в приложении (глобус вверху слева).
+  Future<void> _pickLanguage() async {
+    await showLanguagePicker(
+      context,
+      current: ref.read(localeProvider),
+      onSelect: (locale) => ref.read(localeProvider.notifier).set(locale),
+    );
   }
 
   /// Список стран с поиском. Выбор подставляет код в селектор.
