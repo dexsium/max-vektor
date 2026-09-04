@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:max_vektor/core/constants.dart';
 import 'package:max_vektor/data/account/account.dart';
+import 'package:max_vektor/l10n/app_localizations.dart';
 import 'package:max_vektor/state/providers.dart';
 import 'package:max_vektor/ui/widgets/code_input.dart';
 import 'package:max_vektor/ui/widgets/vektor_mark.dart';
@@ -17,7 +19,19 @@ Widget _app(Widget child) {
         (accounts: const [MvAccount(id: 'acc1')], activeId: 'acc1'),
       ),
     ],
-    child: MaterialApp(home: child),
+    // Локаль ru + делегаты локализации: экран входа использует L.of(context),
+    // а тесты сверяют русские подписи.
+    child: MaterialApp(
+      locale: const Locale('ru'),
+      localizationsDelegates: const [
+        L.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: L.supportedLocales,
+      home: child,
+    ),
   );
 }
 
