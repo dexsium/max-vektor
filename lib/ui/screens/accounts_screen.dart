@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 
 import '../widgets/accounts_section.dart';
 
@@ -10,7 +11,7 @@ class AccountsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Аккаунты')),
+      appBar: AppBar(title: Text(L.of(context).settingsAccounts)),
       body: ListView(
         children: [
           AccountsSection(onSwitched: () => Navigator.of(context).pop()),

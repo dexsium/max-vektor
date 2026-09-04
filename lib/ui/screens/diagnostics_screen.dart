@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/logging.dart';
@@ -20,15 +21,15 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
     final text = MvLogBuffer.dump();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Диагностика'),
+        title: Text(L.of(context).settingsDiagnostics),
         actions: [
           IconButton(
-            tooltip: 'Обновить',
+            tooltip: L.of(context).commonRefresh,
             icon: const Icon(Icons.refresh),
             onPressed: () => setState(() {}),
           ),
           IconButton(
-            tooltip: 'Очистить',
+            tooltip: L.of(context).commonClear,
             icon: const Icon(Icons.delete_outline),
             onPressed: () {
               MvLogBuffer.clear();
@@ -42,9 +43,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
           Padding(
             padding: const EdgeInsets.all(12),
             child: Text(
-              'Логи соединения и протокола (${MvLogBuffer.length} строк). '
-              'Токены и коды не записываются. Скопируйте и пришлите для '
-              'разбора проблемы.',
+              L.of(context).diagHint('${MvLogBuffer.length}'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
@@ -63,7 +62,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
               child: SingleChildScrollView(
                 reverse: true,
                 child: SelectableText(
-                  text.isEmpty ? 'Логов пока нет.' : text,
+                  text.isEmpty ? L.of(context).diagEmpty : text,
                   style: const TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 11,
@@ -80,11 +79,11 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
               height: 48,
               child: FilledButton.icon(
                 icon: const Icon(Icons.copy_all),
-                label: const Text('Скопировать всё'),
+                label: Text(L.of(context).diagCopyAll),
                 onPressed: () async {
                   await Clipboard.setData(ClipboardData(text: text));
                   if (context.mounted) {
-                    AppSnack.show(context, 'Логи скопированы',
+                    AppSnack.show(context, L.of(context).diagCopied,
                         icon: Icons.check);
                   }
                 },

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/constants.dart';
 import '../../data/max/models/chat.dart';
+import '../../l10n/app_localizations.dart';
 import '../../state/chats_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/connection_banner.dart';
@@ -38,15 +39,15 @@ class _ChatsListScreenState extends ConsumerState<ChatsListScreen> {
         title: const Text(AppMeta.name),
         actions: [
           IconButton(
-            tooltip: 'Аккаунты',
+            tooltip: L.of(context).settingsAccounts,
             icon: const Icon(Icons.switch_account_outlined),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const AccountsScreen()),
             ),
           ),
           IconButton(
-            tooltip: 'Архив',
-            onPressed: () => AppSnack.show(context, 'Архив пока пуст'),
+            tooltip: L.of(context).chatsArchive,
+            onPressed: () => AppSnack.show(context, L.of(context).chatsArchiveEmpty),
             icon: const Icon(Icons.archive_outlined),
           ),
         ],
@@ -59,16 +60,16 @@ class _ChatsListScreenState extends ConsumerState<ChatsListScreen> {
             child: TextField(
               controller: _searchCtrl,
               onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: 'Поиск',
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: L.of(context).commonSearch,
               ),
             ),
           ),
           Expanded(
             child: chatsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Ошибка: $e')),
+              error: (e, _) => Center(child: Text(L.of(context).commonError('$e'))),
               data: (chats) {
                 final visible = _query.isEmpty
                     ? chats
@@ -100,7 +101,7 @@ class _ChatsListScreenState extends ConsumerState<ChatsListScreen> {
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const ContactsScreen()),
         ),
-        tooltip: 'Новый чат',
+        tooltip: L.of(context).chatsNewChat,
         child: const Icon(Icons.edit_outlined),
       ),
     );
@@ -127,15 +128,15 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               query.isEmpty
-                  ? 'Чатов пока нет'
-                  : 'Ничего не найдено',
+                  ? L.of(context).chatsEmpty
+                  : L.of(context).commonNothingFound,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 4),
             Text(
               query.isEmpty
-                  ? 'Нажмите на кнопку справа внизу,\nчтобы начать новый чат.'
-                  : 'Попробуйте другой запрос.',
+                  ? L.of(context).chatsEmptyHint
+                  : L.of(context).searchTryAnother,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall,
             ),
@@ -157,6 +158,7 @@ class _ChatTile extends ConsumerWidget {
         ? ''
         : _formatTime(
             DateTime.fromMillisecondsSinceEpoch(chat.lastMessageTimeMs!),
+            L.of(context).dateYesterday,
           );
     final initials = (chat.title?.isNotEmpty ?? false)
         ? chat.title!.characters.first.toUpperCase()
@@ -313,7 +315,7 @@ class _ChatTile extends ConsumerWidget {
               leading: Icon(c.isPinned
                   ? Icons.push_pin
                   : Icons.push_pin_outlined),
-              title: Text(c.isPinned ? 'Открепить' : 'Закрепить'),
+              title: Text(c.isPinned ? L.of(context).chatUnpin : L.of(context).chatPin),
               onTap: () {
                 notifier.togglePin(c.id, !c.isPinned);
                 Navigator.of(ctx).pop();
@@ -324,8 +326,8 @@ class _ChatTile extends ConsumerWidget {
                   ? Icons.notifications_off
                   : Icons.notifications_off_outlined),
               title: Text(c.isMuted
-                  ? 'Включить уведомления'
-                  : 'Отключить уведомления'),
+                  ? L.of(context).chatEnableNotif
+                  : L.of(context).chatDisableNotif),
               onTap: () {
                 notifier.toggleMute(c.id, !c.isMuted);
                 Navigator.of(ctx).pop();
@@ -335,7 +337,7 @@ class _ChatTile extends ConsumerWidget {
               leading: Icon(c.isArchived
                   ? Icons.unarchive_outlined
                   : Icons.archive_outlined),
-              title: Text(c.isArchived ? 'Вернуть из архива' : 'Архивировать'),
+              title: Text(c.isArchived ? L.of(context).chatUnarchive : L.of(context).chatArchive),
               onTap: () {
                 notifier.toggleArchive(c.id, !c.isArchived);
                 Navigator.of(ctx).pop();
@@ -343,7 +345,7 @@ class _ChatTile extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.mark_chat_read_outlined),
-              title: const Text('Прочитано'),
+              title: Text(L.of(context).chatMarkRead),
               onTap: () {
                 notifier.markRead(c.id);
                 Navigator.of(ctx).pop();
@@ -355,7 +357,7 @@ class _ChatTile extends ConsumerWidget {
     );
   }
 
-  static String _formatTime(DateTime dt) {
+  static String _formatTime(DateTime dt, String yesterday) {
     final now = DateTime.now();
     final same = dt.year == now.year &&
         dt.month == now.month &&
@@ -363,9 +365,9 @@ class _ChatTile extends ConsumerWidget {
     if (same) return DateFormat.Hm().format(dt);
     final yest = now.subtract(const Duration(days: 1));
     if (dt.year == yest.year && dt.month == yest.month && dt.day == yest.day) {
-      return 'Вчера';
+      return yesterday;
     }
-    if (now.difference(dt).inDays < 7) return DateFormat.E('ru_RU').format(dt);
+    if (now.difference(dt).inDays < 7) return DateFormat.E().format(dt);
     return DateFormat('d MMM').format(dt);
   }
 

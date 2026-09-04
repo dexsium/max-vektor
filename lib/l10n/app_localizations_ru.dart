@@ -317,4 +317,489 @@ class LRu extends L {
 
   @override
   String get devEmpty => 'Активных сессий не найдено';
+
+  @override
+  String get navContacts => 'Контакты';
+
+  @override
+  String get navCalls => 'Звонки';
+
+  @override
+  String get navChats => 'Чаты';
+
+  @override
+  String get navSettings => 'Настройки';
+
+  @override
+  String get loginBack => 'Назад';
+
+  @override
+  String get loginPhoneTitle => 'Max Vektor';
+
+  @override
+  String get loginCodeTitle => 'Введите код';
+
+  @override
+  String get loginNameTitle => 'Как вас зовут?';
+
+  @override
+  String get login2faTitle => 'Пароль двухфакторной защиты';
+
+  @override
+  String get loginTokenTitle => 'Вход по токену';
+
+  @override
+  String get loginPhonePrompt =>
+      'Введите номер телефона — пришлём код подтверждения.';
+
+  @override
+  String loginCodePrompt(Object phone) {
+    return 'Отправили код на $phone. Он приходит в SMS или в официальное приложение MAX.';
+  }
+
+  @override
+  String get loginNamePrompt =>
+      'Этого номера ещё нет в MAX. Укажите имя — и аккаунт будет создан.';
+
+  @override
+  String get login2faPrompt =>
+      'На аккаунте включён пароль. Введите его, чтобы завершить вход.';
+
+  @override
+  String get loginPhoneField => 'Номер телефона';
+
+  @override
+  String get loginGetCode => 'Получить код';
+
+  @override
+  String get loginConfirm => 'Подтвердить';
+
+  @override
+  String loginResendIn(Object seconds) {
+    return 'Запросить код заново через $seconds с';
+  }
+
+  @override
+  String get loginResend => 'Запросить код заново';
+
+  @override
+  String loginAttemptsLeft(Object count) {
+    return 'Осталось запросов кода: $count';
+  }
+
+  @override
+  String get loginFirstName => 'Имя';
+
+  @override
+  String get loginLastNameOptional => 'Фамилия (необязательно)';
+
+  @override
+  String get loginNameHint =>
+      'Не короче двух символов, только буквы — без цифр, эмодзи и знаков препинания.';
+
+  @override
+  String get loginCreateAccount => 'Создать аккаунт';
+
+  @override
+  String get loginNameTooShort => 'Имя должно быть не короче двух букв';
+
+  @override
+  String get loginPassword => 'Пароль';
+
+  @override
+  String get loginHide => 'Скрыть';
+
+  @override
+  String get loginShow => 'Показать';
+
+  @override
+  String get loginSignIn => 'Войти';
+
+  @override
+  String get loginTokenHint => 'Вставьте токен сюда…';
+
+  @override
+  String get loginTokenButton => 'Войти по токену';
+
+  @override
+  String get loginChangeNumber => 'Изменить номер';
+
+  @override
+  String get loginNameVisibleHint =>
+      'Имя увидят собеседники в MAX. Его можно изменить позже в настройках профиля.';
+
+  @override
+  String get loginByPhone => 'Войти по номеру телефона';
+
+  @override
+  String get loginHaveToken => 'У меня есть auth-token';
+
+  @override
+  String get loginSearchCountry => 'Поиск страны или кода';
+
+  @override
+  String get commonSearch => 'Поиск';
+
+  @override
+  String get commonContinue => 'Продолжить';
+
+  @override
+  String get commonFind => 'Найти';
+
+  @override
+  String get commonNothingFound => 'Ничего не найдено';
+
+  @override
+  String commonError(Object error) {
+    return 'Ошибка: $error';
+  }
+
+  @override
+  String get chatsArchive => 'Архив';
+
+  @override
+  String get chatsArchiveEmpty => 'Архив пока пуст';
+
+  @override
+  String get chatsNewChat => 'Новый чат';
+
+  @override
+  String get chatsEmpty => 'Чатов пока нет';
+
+  @override
+  String get chatsEmptyHint =>
+      'Нажмите на кнопку справа внизу,\nчтобы начать новый чат.';
+
+  @override
+  String get searchTryAnother => 'Попробуйте другой запрос.';
+
+  @override
+  String get chatPin => 'Закрепить';
+
+  @override
+  String get chatUnpin => 'Открепить';
+
+  @override
+  String get chatEnableNotif => 'Включить уведомления';
+
+  @override
+  String get chatDisableNotif => 'Отключить уведомления';
+
+  @override
+  String get chatArchive => 'Архивировать';
+
+  @override
+  String get chatUnarchive => 'Вернуть из архива';
+
+  @override
+  String get chatMarkRead => 'Прочитано';
+
+  @override
+  String get dateYesterday => 'Вчера';
+
+  @override
+  String get contactsHideSearch => 'Скрыть поиск';
+
+  @override
+  String get contactsImport => 'Импорт из адресной книги';
+
+  @override
+  String get contactsAddByNumber => 'Добавить по номеру';
+
+  @override
+  String get contactsDeleteTitle => 'Удалить контакт?';
+
+  @override
+  String contactPlaceholder(Object id) {
+    return 'Контакт $id';
+  }
+
+  @override
+  String get contactDeleted => 'Контакт удалён';
+
+  @override
+  String get contactsImportTitle => 'Импорт контактов';
+
+  @override
+  String contactsImportWarn(Object cap) {
+    return 'MAX считает массовую проверку номеров подозрительной и может заблокировать номер. Чтобы снизить риск, проверю не больше $cap номеров, по одному раз в ~1.5 секунды. Это займёт около минуты. Продолжить?';
+  }
+
+  @override
+  String get contactsReadingBook => 'Чтение адресной книги…';
+
+  @override
+  String contactsChecking(Object done, Object total) {
+    return 'Проверка: $done из $total';
+  }
+
+  @override
+  String contactsFoundInMax(Object found, Object checked) {
+    return 'Найдено в MAX: $found из $checked';
+  }
+
+  @override
+  String get contactsFindByNumber => 'Найти по номеру';
+
+  @override
+  String get contactsPhone => 'Телефон';
+
+  @override
+  String contactsFound(Object name) {
+    return 'Найден: $name';
+  }
+
+  @override
+  String get contactsEmpty =>
+      'Контактов нет. Импортируйте адресную книгу или добавьте номер вручную.';
+
+  @override
+  String get callsCreate => 'Создать звонок';
+
+  @override
+  String get callsEmpty => 'История звонков пуста';
+
+  @override
+  String get callsEmptyHint =>
+      'Голосовые и видеозвонки появятся в одном из следующих обновлений.';
+
+  @override
+  String get callMissed => 'Пропущенный';
+
+  @override
+  String get callIncoming => 'Входящий';
+
+  @override
+  String get callOutgoing => 'Исходящий';
+
+  @override
+  String get profileTitle => 'Профиль';
+
+  @override
+  String get profileSaved => 'Профиль сохранён';
+
+  @override
+  String get profileLastName => 'Фамилия';
+
+  @override
+  String get profileAbout => 'О себе';
+
+  @override
+  String get profileDelete => 'Удалить профиль';
+
+  @override
+  String get profileLogout => 'Выйти из профиля';
+
+  @override
+  String get profileDeleteInactive => 'Удалить профиль, если он неактивен';
+
+  @override
+  String get profileTtlUpdated => 'Срок обновлён';
+
+  @override
+  String get profileLogoutTitle => 'Выйти из профиля?';
+
+  @override
+  String get profileLogoutBody =>
+      'Аккаунт исчезнет из переключателя. Его локальные данные будут удалены с устройства. Другие аккаунты не затрагиваются.';
+
+  @override
+  String get commonRefresh => 'Обновить';
+
+  @override
+  String get commonClear => 'Очистить';
+
+  @override
+  String chatMember(Object id) {
+    return 'Участник $id';
+  }
+
+  @override
+  String get chatLastSeenRecently => 'был(а) недавно';
+
+  @override
+  String chatMembersCount(Object count) {
+    return '$count участн.';
+  }
+
+  @override
+  String chatTitlePlaceholder(Object id) {
+    return 'Чат $id';
+  }
+
+  @override
+  String get chatEmpty => 'Сообщений пока нет';
+
+  @override
+  String get chatVideoCall => 'Видеозвонок';
+
+  @override
+  String get chatCall => 'Звонок';
+
+  @override
+  String get chatMedia => 'Медиа чата';
+
+  @override
+  String get chatNewMessages => 'Новые сообщения';
+
+  @override
+  String get chatReplyTo => 'Ответ на:';
+
+  @override
+  String get chatReplyCancel => 'Отменить ответ';
+
+  @override
+  String get forwardUnknownUser => 'Пользователь';
+
+  @override
+  String get msgReply => 'Ответить';
+
+  @override
+  String get msgCopy => 'Копировать';
+
+  @override
+  String get msgForward => 'Переслать';
+
+  @override
+  String get msgEdit => 'Редактировать';
+
+  @override
+  String get msgEditHint => 'Новый текст';
+
+  @override
+  String get msgCopied => 'Скопировано';
+
+  @override
+  String get msgReplyNotConfirmed =>
+      'Нельзя ответить: сообщение ещё не подтверждено сервером';
+
+  @override
+  String get msgForwardTextOnly =>
+      'Пока пересылаются только текстовые сообщения';
+
+  @override
+  String get sendAttachFailed => 'Не удалось отправить вложение';
+
+  @override
+  String diagHint(Object count) {
+    return 'Логи соединения и протокола ($count строк). Токены и коды не записываются. Скопируйте и пришлите для разбора проблемы.';
+  }
+
+  @override
+  String get diagEmpty => 'Логов пока нет.';
+
+  @override
+  String get diagCopyAll => 'Скопировать всё';
+
+  @override
+  String get diagCopied => 'Логи скопированы';
+
+  @override
+  String get qrConfirming => 'Подтверждаем вход…';
+
+  @override
+  String get qrDone => 'Готово. Вход на другом устройстве подтверждён.';
+
+  @override
+  String get qrHint =>
+      'Наведите камеру на QR-код со страницы входа MAX на другом устройстве (например web.max.ru). Ваш аккаунт подтвердит вход.';
+
+  @override
+  String get videoError => 'Не удалось воспроизвести видео';
+
+  @override
+  String get videoTitle => 'Видео';
+
+  @override
+  String get connConnecting => 'Подключение…';
+
+  @override
+  String get connReconnecting => 'Переподключение…';
+
+  @override
+  String get connNoConnection => 'Нет соединения';
+
+  @override
+  String get inputAttach => 'Прикрепить';
+
+  @override
+  String get inputMessage => 'Сообщение';
+
+  @override
+  String get attachPhotoGallery => 'Фото из галереи';
+
+  @override
+  String get attachVideoGallery => 'Видео из галереи';
+
+  @override
+  String get attachTakePhoto => 'Снять фото';
+
+  @override
+  String get attachTakeVideo => 'Снять видео';
+
+  @override
+  String get attachFile => 'Файл';
+
+  @override
+  String devLoadFailed(Object error) {
+    return 'Не удалось загрузить сессии:\n$error';
+  }
+
+  @override
+  String get fwdPickTitle => 'Переслать в';
+
+  @override
+  String get fwdSearchChat => 'Поиск чата';
+
+  @override
+  String fwdForwardedTo(Object target) {
+    return 'Переслано в $target';
+  }
+
+  @override
+  String get galleryEmpty => 'Медиа пока нет';
+
+  @override
+  String get profChat => 'Чат';
+
+  @override
+  String get profMediaFilesLinks => 'Медиа, файлы и ссылки';
+
+  @override
+  String get profNotifications => 'Уведомления';
+
+  @override
+  String get profEnabled => 'Включены';
+
+  @override
+  String get profPinChat => 'Закрепить чат';
+
+  @override
+  String get profClearHistory => 'Очистить историю';
+
+  @override
+  String get profClearHistoryTitle => 'Очистить историю?';
+
+  @override
+  String get profHistoryCleared => 'История очищена локально';
+
+  @override
+  String get accAddAccount => 'Добавить аккаунт';
+
+  @override
+  String accLogoutTitle(Object name) {
+    return 'Выйти из «$name»?';
+  }
+
+  @override
+  String get transcribe => 'Расшифровать';
+
+  @override
+  String get transcribeEmpty => 'Расшифровка пуста';
+
+  @override
+  String get audioUnavailable => 'Аудио недоступно';
+
+  @override
+  String get audioPlayFailed => 'Не удалось воспроизвести аудио';
 }

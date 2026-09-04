@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/max/models/message.dart';
+import '../../l10n/app_localizations.dart';
 import '../../state/appearance_controller.dart';
 import '../../state/chats_controller.dart';
 import '../theme/wallpapers.dart';
@@ -65,7 +66,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final names = ref
         .watch(chatSenderNamesProvider(widget.chatId))
         .maybeWhen(data: (v) => v, orElse: () => const <int, String>{});
-    return names[id] ?? 'Участник $id';
+    return names[id] ?? L.of(context).chatMember('$id');
   }
 
   /// Подзаголовок шапки: для группы/канала — тип и число участников,
@@ -74,9 +75,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final chat = ref
         .watch(chatByIdProvider(widget.chatId))
         .maybeWhen(data: (c) => c, orElse: () => null);
-    if (chat == null || !chat.isMultiUser) return 'был(а) недавно';
+    if (chat == null || !chat.isMultiUser) return L.of(context).chatLastSeenRecently;
     final n = chat.membersCount;
-    return n == null ? chat.kind.label : '${chat.kind.label} · $n участн.';
+    return n == null
+        ? chat.kind.label
+        : '${chat.kind.label} · ${L.of(context).chatMembersCount(n)}';
   }
 
   bool get _isMultiUserChat =>
@@ -131,23 +134,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.reply),
-              title: const Text('Ответить'),
+              title: Text(L.of(context).msgReply),
               onTap: () => Navigator.pop(ctx, 'reply'),
             ),
             ListTile(
               leading: const Icon(Icons.copy),
-              title: const Text('Копировать'),
+              title: Text(L.of(context).msgCopy),
               onTap: () => Navigator.pop(ctx, 'copy'),
             ),
             ListTile(
               leading: const Icon(Icons.forward),
-              title: const Text('Переслать'),
+              title: Text(L.of(context).msgForward),
               onTap: () => Navigator.pop(ctx, 'forward'),
             ),
             if (canEdit)
               ListTile(
                 leading: const Icon(Icons.edit_outlined),
-                title: const Text('Редактировать'),
+                title: Text(L.of(context).msgEdit),
                 onTap: () => Navigator.pop(ctx, 'edit'),
               ),
           ],
@@ -158,8 +161,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (action == 'reply') {
       if (m.id == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Нельзя ответить: сообщение ещё не подтверждено сервером'),
+          SnackBar(
+            content: Text(L.of(context).msgReplyNotConfirmed),
           ),
         );
         return;
@@ -170,8 +173,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     } else if (action == 'forward') {
       if (m.text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Пока пересылаются только текстовые сообщения'),
+          SnackBar(
+            content: Text(L.of(context).msgForwardTextOnly),
           ),
         );
         return;
@@ -187,29 +190,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _showEditDialog(MaxMessage m) async {
+    final l = L.of(context);
     final messageId = m.id;
     if (messageId == null) return;
     final controller = TextEditingController(text: m.text);
     final newText = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Редактировать'),
+        title: Text(L.of(context).msgEdit),
         content: TextField(
           controller: controller,
           autofocus: true,
           maxLines: null,
-          decoration: const InputDecoration(
-            hintText: 'Новый текст',
+          decoration: InputDecoration(
+            hintText: L.of(context).msgEditHint,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Отмена'),
+            child: Text(L.of(context).commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
-            child: const Text('Сохранить'),
+            child: Text(L.of(context).commonSave),
           ),
         ],
       ),
@@ -225,7 +229,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           .editMessage(messageId, trimmed);
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Не удалось отредактировать: $e')),
+        SnackBar(content: Text(l.commonError('$e'))),
       );
     }
   }
@@ -234,7 +238,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Скопировано')),
+      SnackBar(content: Text(L.of(context).msgCopied)),
     );
   }
 
@@ -278,7 +282,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        widget.title ?? 'Чат ${widget.chatId}',
+                        widget.title ?? L.of(context).chatTitlePlaceholder('${widget.chatId}'),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -303,14 +307,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Видеозвонок',
+            tooltip: L.of(context).chatVideoCall,
             onPressed: () => AppSnack.soon(context),
             icon: const Icon(Icons.videocam_outlined),
           ),
           IconButton(
-            tooltip: 'Звонок',
+            tooltip: L.of(context).chatCall,
             onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Звонок: в разработке')),
+              SnackBar(content: Text(L.of(context).commonSoon)),
             ),
             icon: const Icon(Icons.call_outlined),
           ),
@@ -336,10 +340,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 );
               }
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'profile', child: Text('Профиль')),
-              PopupMenuItem(value: 'media', child: Text('Медиа чата')),
-              PopupMenuItem(value: 'sync', child: Text('Обновить')),
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'profile', child: Text(L.of(context).profileTitle)),
+              PopupMenuItem(value: 'media', child: Text(L.of(context).chatMedia)),
+              PopupMenuItem(value: 'sync', child: Text(L.of(context).commonRefresh)),
             ],
           ),
         ],
@@ -351,15 +355,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               data: (msgs) {
                 _maybeScrollToEnd(msgs);
                 if (msgs.isEmpty) {
-                  return const Center(
-                    child: Text('Сообщений пока нет'),
+                  return Center(
+                    child: Text(L.of(context).chatEmpty),
                   );
                 }
                 return _buildList(msgs, loadingOlder);
               },
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Ошибка: $e')),
+              error: (e, _) => Center(child: Text(L.of(context).commonError('$e'))),
             ),
           ),
           if (_replyTo != null) _replyChip(_replyTo!),
@@ -377,12 +381,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             onTypingChanged: (active) => ctrl.sendTyping(active),
             onAttach: (inputs) async {
               final messenger = ScaffoldMessenger.of(context);
+              final attachErr = L.of(context).sendAttachFailed;
               try {
                 await ctrl.sendMedia(inputs, text: '');
                 _scrollToEnd();
               } catch (e) {
                 messenger.showSnackBar(
-                  SnackBar(content: Text('Не удалось отправить вложение: $e')),
+                  SnackBar(content: Text('$attachErr: $e')),
                 );
               }
             },
@@ -509,8 +514,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final id = m.forwardFromId;
     if (id == null) return null;
     return ref.watch(userDisplayNameProvider(id)).maybeWhen(
-          data: (n) => (n != null && n.isNotEmpty) ? n : 'Пользователь',
-          orElse: () => 'Пользователь',
+          data: (n) => (n != null && n.isNotEmpty) ? n : L.of(context).forwardUnknownUser,
+          orElse: () => L.of(context).forwardUnknownUser,
         );
   }
 
@@ -523,7 +528,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       color: scheme.primaryContainer.withValues(alpha: 0.5),
       child: Center(
         child: Text(
-          'Новые сообщения',
+          L.of(context).chatNewMessages,
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
@@ -574,7 +579,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Ответ на:',
+                  L.of(context).chatReplyTo,
                   style: TextStyle(
                     fontSize: 11,
                     color: scheme.onSurfaceVariant,
@@ -590,7 +595,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           ),
           IconButton(
-            tooltip: 'Отменить ответ',
+            tooltip: L.of(context).chatReplyCancel,
             icon: const Icon(Icons.close),
             onPressed: () => setState(() => _replyTo = null),
           ),

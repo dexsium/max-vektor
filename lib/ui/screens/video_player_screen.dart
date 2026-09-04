@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
@@ -36,7 +37,7 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
         _maybeAutoplay();
       }).catchError((Object e) {
         if (!mounted) return;
-        setState(() => _error = 'Не удалось воспроизвести видео');
+        setState(() => _error = L.of(context).videoError);
       });
     _controller.addListener(_tick);
   }
@@ -76,7 +77,7 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: Text(widget.title ?? 'Видео'),
+        title: Text(widget.title ?? L.of(context).videoTitle),
       ),
       body: Center(
         child: _error != null

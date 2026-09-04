@@ -2,11 +2,15 @@ import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/max/models/attach.dart';
 import '../../state/media_gallery_controller.dart';
+import '../../state/providers.dart';
+import '../widgets/app_snack.dart';
 import 'photo_view_screen.dart';
+import 'video_player_screen.dart';
 
 /// Экран «Медиа чата»: 3-колоночная сетка из PHOTO/VIDEO. Свайп вниз —
 /// принудительный sync. Тап на ячейку — fullscreen viewer.
@@ -20,12 +24,12 @@ class MediaGalleryScreen extends ConsumerWidget {
     final async = ref.watch(mediaGalleryProvider(chatId));
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Медиа чата'),
+        title: Text(L.of(context).chatMedia),
       ),
       body: async.when(
         data: (list) => _buildGrid(context, ref, list),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Ошибка: $e')),
+        error: (e, _) => Center(child: Text(L.of(context).commonError('$e'))),
       ),
     );
   }
@@ -36,9 +40,9 @@ class MediaGalleryScreen extends ConsumerWidget {
       return RefreshIndicator(
         onRefresh: notifier.refresh,
         child: ListView(
-          children: const [
-            SizedBox(height: 200),
-            Center(child: Text('Медиа пока нет')),
+          children: [
+            const SizedBox(height: 200),
+            Center(child: Text(L.of(context).galleryEmpty)),
           ],
         ),
       );
@@ -61,9 +65,7 @@ class MediaGalleryScreen extends ConsumerWidget {
             onTap: () {
               if (a.type == MaxAttachType.video ||
                   a.type == MaxAttachType.videoMsg) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Видео плеер: TODO')),
-                );
+                _openVideo(context, ref, a);
                 return;
               }
               Navigator.of(context).push(
@@ -76,6 +78,36 @@ class MediaGalleryScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  /// Открыть видео из галереи в том же полноэкранном плеере, что и в чате.
+  /// Прямая ссылка лежит в downloadUrl; если её нет — запрашиваем поток через
+  /// VIDEO_PLAY (op 83) по videoId (fileId).
+  Future<void> _openVideo(
+      BuildContext context, WidgetRef ref, MaxAttach a) async {
+    final l = L.of(context);
+    final nav = Navigator.of(context);
+    var url = a.downloadUrl ?? a.localPath;
+    if ((url == null || url.isEmpty) && a.fileId != null) {
+      try {
+        final resp = await ref.read(maxClientProvider).requestVideoPlay(
+              videoId: a.fileId!,
+              chatId: chatId,
+              token: a.token,
+            );
+        url = resp['videoUrl']?.toString() ??
+            resp['url']?.toString() ??
+            resp['embedUrl']?.toString();
+      } catch (e) {
+        if (context.mounted) AppSnack.show(context, l.videoError, error: true);
+        return;
+      }
+    }
+    if (url == null || url.isEmpty) {
+      if (context.mounted) AppSnack.show(context, l.videoError, error: true);
+      return;
+    }
+    nav.push(MaterialPageRoute(builder: (_) => VideoPlayerScreen(url: url!)));
   }
 }
 

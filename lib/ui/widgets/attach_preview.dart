@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/local/cache_managers.dart';
@@ -115,7 +116,7 @@ class _AttachPreviewState extends ConsumerState<AttachPreview> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.text_snippet_outlined, size: 16),
-          label: const Text('Расшифровать'),
+          label: Text(L.of(context).transcribe),
         ),
       ),
     );
@@ -133,13 +134,13 @@ class _AttachPreviewState extends ConsumerState<AttachPreview> {
       if (!mounted) return;
       if (text == null || text.isEmpty) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Расшифровка пуста')),
+          SnackBar(content: Text(L.of(context).transcribeEmpty)),
         );
       }
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Не удалось расшифровать: $e')),
+        SnackBar(content: Text(L.of(context).commonError('$e'))),
       );
     } finally {
       if (mounted) {
@@ -288,7 +289,7 @@ class _AttachPreviewState extends ConsumerState<AttachPreview> {
         final local = attach.localPath;
         if (local != null && File(local).existsSync()) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Файл: $local')),
+            SnackBar(content: Text('${L.of(context).attachFile}: $local')),
           );
           return;
         }

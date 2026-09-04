@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/account/account.dart';
@@ -13,7 +14,12 @@ import '../../state/session_controller.dart';
 /// поэтому тап по аккаунту переключает мгновенно и не выполняет повторный
 /// вход (частые LOGIN с одного устройства — сигнал для антифрода MAX).
 class AccountsSection extends ConsumerWidget {
-  const AccountsSection({super.key, this.onSwitched, this.showHeader = true});
+  const AccountsSection({
+    super.key,
+    this.onSwitched,
+    this.showHeader = true,
+    this.showFooter = true,
+  });
 
   /// Вызывается после переключения — экрану аккаунтов нужно закрыться,
   /// настройкам достаточно перерисоваться.
@@ -22,6 +28,10 @@ class AccountsSection extends ConsumerWidget {
   /// Показывать собственный заголовок «Аккаунты». В настройках секция уже
   /// обёрнута в группу с заголовком, поэтому там его отключаем.
   final bool showHeader;
+
+  /// Показывать пояснительный текст под списком. В настройках-карточке (как в
+  /// официальном приложении) его прячем, чтобы блок был компактным.
+  final bool showFooter;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -56,7 +66,7 @@ class AccountsSection extends ConsumerWidget {
           ),
         ListTile(
           leading: const Icon(Icons.person_add_alt),
-          title: const Text('Добавить аккаунт'),
+          title: Text(L.of(context).accAddAccount),
           subtitle: Text(
             limitReached
                 ? 'Достигнут предел: ${AccountStore.maxAccounts} аккаунтов'
@@ -70,16 +80,17 @@ class AccountsSection extends ConsumerWidget {
                   onSwitched?.call();
                 },
         ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
-          child: Text(
-            'У каждого аккаунта своя переписка, свой вход и свой '
-            'идентификатор устройства — данные не смешиваются. '
-            'Переключение не выполняет повторный вход: соединение остаётся '
-            'поднятым, пока вы не выйдете из аккаунта.',
-            style: TextStyle(fontSize: 12),
+        if (showFooter)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: Text(
+              'У каждого аккаунта своя переписка, свой вход и свой '
+              'идентификатор устройства — данные не смешиваются. '
+              'Переключение не выполняет повторный вход: соединение остаётся '
+              'поднятым, пока вы не выйдете из аккаунта.',
+              style: TextStyle(fontSize: 12),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -92,7 +103,7 @@ class AccountsSection extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Выйти из «${account.label}»?'),
+        title: Text(L.of(context).accLogoutTitle(account.label)),
         content: const Text(
           'Аккаунт исчезнет из списка. Локальная история переписки, '
           'скачанные файлы и сохранённый вход этого аккаунта будут удалены '
@@ -101,11 +112,11 @@ class AccountsSection extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Отмена'),
+            child: Text(L.of(context).commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Выйти'),
+            child: Text(L.of(context).commonLogout),
           ),
         ],
       ),
@@ -162,7 +173,7 @@ class _AccountTile extends StatelessWidget {
           if (isActive)
             Icon(Icons.check_circle, color: scheme.primary, size: 22),
           IconButton(
-            tooltip: 'Выйти из аккаунта',
+            tooltip: L.of(context).settingsLogout,
             icon: const Icon(Icons.logout),
             color: scheme.error,
             onPressed: onSignOut,

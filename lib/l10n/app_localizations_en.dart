@@ -314,4 +314,489 @@ class LEn extends L {
 
   @override
   String get devEmpty => 'No active sessions found';
+
+  @override
+  String get navContacts => 'Contacts';
+
+  @override
+  String get navCalls => 'Calls';
+
+  @override
+  String get navChats => 'Chats';
+
+  @override
+  String get navSettings => 'Settings';
+
+  @override
+  String get loginBack => 'Back';
+
+  @override
+  String get loginPhoneTitle => 'Max Vektor';
+
+  @override
+  String get loginCodeTitle => 'Enter the code';
+
+  @override
+  String get loginNameTitle => 'What\'s your name?';
+
+  @override
+  String get login2faTitle => 'Two-factor password';
+
+  @override
+  String get loginTokenTitle => 'Log in with token';
+
+  @override
+  String get loginPhonePrompt =>
+      'Enter your phone number — we\'ll send a confirmation code.';
+
+  @override
+  String loginCodePrompt(Object phone) {
+    return 'We sent a code to $phone. It arrives by SMS or in the official MAX app.';
+  }
+
+  @override
+  String get loginNamePrompt =>
+      'This number isn\'t in MAX yet. Enter a name — and an account will be created.';
+
+  @override
+  String get login2faPrompt =>
+      'This account has a password. Enter it to finish signing in.';
+
+  @override
+  String get loginPhoneField => 'Phone number';
+
+  @override
+  String get loginGetCode => 'Get the code';
+
+  @override
+  String get loginConfirm => 'Confirm';
+
+  @override
+  String loginResendIn(Object seconds) {
+    return 'Request a new code in ${seconds}s';
+  }
+
+  @override
+  String get loginResend => 'Request a new code';
+
+  @override
+  String loginAttemptsLeft(Object count) {
+    return 'Code requests left: $count';
+  }
+
+  @override
+  String get loginFirstName => 'First name';
+
+  @override
+  String get loginLastNameOptional => 'Last name (optional)';
+
+  @override
+  String get loginNameHint =>
+      'At least two characters, letters only — no digits, emoji or punctuation.';
+
+  @override
+  String get loginCreateAccount => 'Create account';
+
+  @override
+  String get loginNameTooShort => 'The name must be at least two letters';
+
+  @override
+  String get loginPassword => 'Password';
+
+  @override
+  String get loginHide => 'Hide';
+
+  @override
+  String get loginShow => 'Show';
+
+  @override
+  String get loginSignIn => 'Sign in';
+
+  @override
+  String get loginTokenHint => 'Paste the token here…';
+
+  @override
+  String get loginTokenButton => 'Log in with token';
+
+  @override
+  String get loginChangeNumber => 'Change number';
+
+  @override
+  String get loginNameVisibleHint =>
+      'Others in MAX will see your name. You can change it later in profile settings.';
+
+  @override
+  String get loginByPhone => 'Log in with phone number';
+
+  @override
+  String get loginHaveToken => 'I have an auth token';
+
+  @override
+  String get loginSearchCountry => 'Search country or code';
+
+  @override
+  String get commonSearch => 'Search';
+
+  @override
+  String get commonContinue => 'Continue';
+
+  @override
+  String get commonFind => 'Find';
+
+  @override
+  String get commonNothingFound => 'Nothing found';
+
+  @override
+  String commonError(Object error) {
+    return 'Error: $error';
+  }
+
+  @override
+  String get chatsArchive => 'Archive';
+
+  @override
+  String get chatsArchiveEmpty => 'The archive is empty';
+
+  @override
+  String get chatsNewChat => 'New chat';
+
+  @override
+  String get chatsEmpty => 'No chats yet';
+
+  @override
+  String get chatsEmptyHint =>
+      'Tap the button at the bottom right\nto start a new chat.';
+
+  @override
+  String get searchTryAnother => 'Try another query.';
+
+  @override
+  String get chatPin => 'Pin';
+
+  @override
+  String get chatUnpin => 'Unpin';
+
+  @override
+  String get chatEnableNotif => 'Enable notifications';
+
+  @override
+  String get chatDisableNotif => 'Mute notifications';
+
+  @override
+  String get chatArchive => 'Archive';
+
+  @override
+  String get chatUnarchive => 'Unarchive';
+
+  @override
+  String get chatMarkRead => 'Mark read';
+
+  @override
+  String get dateYesterday => 'Yesterday';
+
+  @override
+  String get contactsHideSearch => 'Hide search';
+
+  @override
+  String get contactsImport => 'Import from address book';
+
+  @override
+  String get contactsAddByNumber => 'Add by number';
+
+  @override
+  String get contactsDeleteTitle => 'Delete contact?';
+
+  @override
+  String contactPlaceholder(Object id) {
+    return 'Contact $id';
+  }
+
+  @override
+  String get contactDeleted => 'Contact deleted';
+
+  @override
+  String get contactsImportTitle => 'Import contacts';
+
+  @override
+  String contactsImportWarn(Object cap) {
+    return 'MAX treats bulk number lookups as suspicious and may block the number. To reduce the risk, I\'ll check no more than $cap numbers, one at a time about every ~1.5 seconds. This takes about a minute. Continue?';
+  }
+
+  @override
+  String get contactsReadingBook => 'Reading address book…';
+
+  @override
+  String contactsChecking(Object done, Object total) {
+    return 'Checking: $done of $total';
+  }
+
+  @override
+  String contactsFoundInMax(Object found, Object checked) {
+    return 'Found in MAX: $found of $checked';
+  }
+
+  @override
+  String get contactsFindByNumber => 'Find by number';
+
+  @override
+  String get contactsPhone => 'Phone';
+
+  @override
+  String contactsFound(Object name) {
+    return 'Found: $name';
+  }
+
+  @override
+  String get contactsEmpty =>
+      'No contacts. Import your address book or add a number manually.';
+
+  @override
+  String get callsCreate => 'Start a call';
+
+  @override
+  String get callsEmpty => 'Call history is empty';
+
+  @override
+  String get callsEmptyHint =>
+      'Voice and video calls will arrive in an upcoming update.';
+
+  @override
+  String get callMissed => 'Missed';
+
+  @override
+  String get callIncoming => 'Incoming';
+
+  @override
+  String get callOutgoing => 'Outgoing';
+
+  @override
+  String get profileTitle => 'Profile';
+
+  @override
+  String get profileSaved => 'Profile saved';
+
+  @override
+  String get profileLastName => 'Last name';
+
+  @override
+  String get profileAbout => 'About';
+
+  @override
+  String get profileDelete => 'Delete profile';
+
+  @override
+  String get profileLogout => 'Log out of profile';
+
+  @override
+  String get profileDeleteInactive => 'Delete profile if inactive';
+
+  @override
+  String get profileTtlUpdated => 'Period updated';
+
+  @override
+  String get profileLogoutTitle => 'Log out of profile?';
+
+  @override
+  String get profileLogoutBody =>
+      'The account will disappear from the switcher. Its local data will be removed from this device. Other accounts are not affected.';
+
+  @override
+  String get commonRefresh => 'Refresh';
+
+  @override
+  String get commonClear => 'Clear';
+
+  @override
+  String chatMember(Object id) {
+    return 'Member $id';
+  }
+
+  @override
+  String get chatLastSeenRecently => 'last seen recently';
+
+  @override
+  String chatMembersCount(Object count) {
+    return '$count members';
+  }
+
+  @override
+  String chatTitlePlaceholder(Object id) {
+    return 'Chat $id';
+  }
+
+  @override
+  String get chatEmpty => 'No messages yet';
+
+  @override
+  String get chatVideoCall => 'Video call';
+
+  @override
+  String get chatCall => 'Call';
+
+  @override
+  String get chatMedia => 'Chat media';
+
+  @override
+  String get chatNewMessages => 'New messages';
+
+  @override
+  String get chatReplyTo => 'Reply to:';
+
+  @override
+  String get chatReplyCancel => 'Cancel reply';
+
+  @override
+  String get forwardUnknownUser => 'User';
+
+  @override
+  String get msgReply => 'Reply';
+
+  @override
+  String get msgCopy => 'Copy';
+
+  @override
+  String get msgForward => 'Forward';
+
+  @override
+  String get msgEdit => 'Edit';
+
+  @override
+  String get msgEditHint => 'New text';
+
+  @override
+  String get msgCopied => 'Copied';
+
+  @override
+  String get msgReplyNotConfirmed =>
+      'Can\'t reply: the message isn\'t confirmed by the server yet';
+
+  @override
+  String get msgForwardTextOnly =>
+      'Only text messages can be forwarded for now';
+
+  @override
+  String get sendAttachFailed => 'Couldn\'t send the attachment';
+
+  @override
+  String diagHint(Object count) {
+    return 'Connection and protocol logs ($count lines). Tokens and codes are not recorded. Copy and send them for troubleshooting.';
+  }
+
+  @override
+  String get diagEmpty => 'No logs yet.';
+
+  @override
+  String get diagCopyAll => 'Copy all';
+
+  @override
+  String get diagCopied => 'Logs copied';
+
+  @override
+  String get qrConfirming => 'Confirming login…';
+
+  @override
+  String get qrDone => 'Done. Login on the other device is confirmed.';
+
+  @override
+  String get qrHint =>
+      'Point the camera at the QR code on the MAX login page on another device (for example web.max.ru). Your account will confirm the login.';
+
+  @override
+  String get videoError => 'Couldn\'t play the video';
+
+  @override
+  String get videoTitle => 'Video';
+
+  @override
+  String get connConnecting => 'Connecting…';
+
+  @override
+  String get connReconnecting => 'Reconnecting…';
+
+  @override
+  String get connNoConnection => 'No connection';
+
+  @override
+  String get inputAttach => 'Attach';
+
+  @override
+  String get inputMessage => 'Message';
+
+  @override
+  String get attachPhotoGallery => 'Photo from gallery';
+
+  @override
+  String get attachVideoGallery => 'Video from gallery';
+
+  @override
+  String get attachTakePhoto => 'Take a photo';
+
+  @override
+  String get attachTakeVideo => 'Record a video';
+
+  @override
+  String get attachFile => 'File';
+
+  @override
+  String devLoadFailed(Object error) {
+    return 'Couldn\'t load sessions:\n$error';
+  }
+
+  @override
+  String get fwdPickTitle => 'Forward to';
+
+  @override
+  String get fwdSearchChat => 'Search chat';
+
+  @override
+  String fwdForwardedTo(Object target) {
+    return 'Forwarded to $target';
+  }
+
+  @override
+  String get galleryEmpty => 'No media yet';
+
+  @override
+  String get profChat => 'Chat';
+
+  @override
+  String get profMediaFilesLinks => 'Media, files and links';
+
+  @override
+  String get profNotifications => 'Notifications';
+
+  @override
+  String get profEnabled => 'On';
+
+  @override
+  String get profPinChat => 'Pin chat';
+
+  @override
+  String get profClearHistory => 'Clear history';
+
+  @override
+  String get profClearHistoryTitle => 'Clear history?';
+
+  @override
+  String get profHistoryCleared => 'History cleared locally';
+
+  @override
+  String get accAddAccount => 'Add account';
+
+  @override
+  String accLogoutTitle(Object name) {
+    return 'Log out of “$name”?';
+  }
+
+  @override
+  String get transcribe => 'Transcribe';
+
+  @override
+  String get transcribeEmpty => 'Transcript is empty';
+
+  @override
+  String get audioUnavailable => 'Audio unavailable';
+
+  @override
+  String get audioPlayFailed => 'Couldn\'t play the audio';
 }

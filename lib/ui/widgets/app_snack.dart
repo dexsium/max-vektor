@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// Единый стиль всплывающих уведомлений в дизайне приложения:
 /// скруглённая плавающая плашка с иконкой, вместо голого SnackBar.
 class AppSnack {
@@ -41,5 +43,6 @@ class AppSnack {
 
   /// «Раздел в разработке» — для ещё не реализованных пунктов настроек.
   static void soon(BuildContext context) =>
-      show(context, 'Раздел в разработке', icon: Icons.construction_outlined);
+      show(context, L.of(context).commonSoon,
+          icon: Icons.construction_outlined);
 }

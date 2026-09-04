@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/session_controller.dart';
 import '../widgets/app_snack.dart';
@@ -114,12 +115,12 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         current.copyWith(displayName: name.isEmpty ? null : name),
       );
       if (mounted) {
-        AppSnack.show(context, 'Профиль сохранён', icon: Icons.check);
+        AppSnack.show(context, L.of(context).profileSaved, icon: Icons.check);
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        AppSnack.show(context, 'Не удалось сохранить: $e', error: true);
+        AppSnack.show(context, L.of(context).commonError('$e'), error: true);
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -130,7 +131,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Профиль')),
+      appBar: AppBar(title: Text(L.of(context).profileTitle)),
       body: !_loaded
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -138,22 +139,22 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
               children: [
                 Center(child: _avatar(scheme)),
                 const SizedBox(height: 24),
-                _field(_firstCtrl, 'Имя'),
+                _field(_firstCtrl, L.of(context).loginFirstName),
                 const SizedBox(height: 12),
-                _field(_lastCtrl, 'Фамилия'),
+                _field(_lastCtrl, L.of(context).profileLastName),
                 const SizedBox(height: 12),
-                _field(_aboutCtrl, 'О себе', maxLines: 3),
+                _field(_aboutCtrl, L.of(context).profileAbout, maxLines: 3),
                 const SizedBox(height: 16),
                 _tile(
                   icon: Icons.auto_delete_outlined,
-                  title: 'Удалить профиль',
+                  title: L.of(context).profileDelete,
                   subtitle: _ttlLabel(_inactiveTtl),
                   onTap: _pickTtl,
                 ),
                 const SizedBox(height: 12),
                 _dangerTile(
                   icon: Icons.logout,
-                  title: 'Выйти из профиля',
+                  title: L.of(context).profileLogout,
                   onTap: () => _confirmLogout(context),
                 ),
               ],
@@ -178,8 +179,8 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                             height: 22,
                             child: CircularProgressIndicator(strokeWidth: 2.4),
                           )
-                        : const Text('Сохранить',
-                            style: TextStyle(
+                        : Text(L.of(context).commonSave,
+                            style: const TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.w600)),
                   ),
                 ),
@@ -274,11 +275,11 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
-                'Удалить профиль, если он неактивен',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                L.of(context).profileDeleteInactive,
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
             for (final ttl in const ['1M', '3M', '6M'])
@@ -298,10 +299,10 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     setState(() => _inactiveTtl = chosen);
     try {
       await ref.read(maxClientProvider).setInactiveDeleteTtl(chosen);
-      if (mounted) AppSnack.show(context, 'Срок обновлён', icon: Icons.check);
+      if (mounted) AppSnack.show(context, L.of(context).profileTtlUpdated, icon: Icons.check);
     } catch (e) {
       if (mounted) {
-        AppSnack.show(context, 'Не удалось задать срок: $e', error: true);
+        AppSnack.show(context, L.of(context).commonError('$e'), error: true);
       }
     }
   }
@@ -351,19 +352,16 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Выйти из профиля?'),
-        content: const Text(
-          'Аккаунт исчезнет из переключателя. Его локальные данные будут '
-          'удалены с устройства. Другие аккаунты не затрагиваются.',
-        ),
+        title: Text(L.of(context).profileLogoutTitle),
+        content: Text(L.of(context).profileLogoutBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Отмена'),
+            child: Text(L.of(context).commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Выйти'),
+            child: Text(L.of(context).commonLogout),
           ),
         ],
       ),

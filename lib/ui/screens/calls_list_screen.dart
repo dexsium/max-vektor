@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../data/local/database.dart';
+import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 
 /// История звонков. WebRTC-вызовы не реализованы (опкоды реал-тайм медиа
@@ -14,12 +15,13 @@ class CallsListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final calls = ref.watch(_callsLogProvider);
+    final l = L.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Звонки'),
+        title: Text(l.navCalls),
         actions: [
           IconButton(
-            tooltip: 'Создать звонок',
+            tooltip: l.callsCreate,
             onPressed: () => _showStub(context),
             icon: const Icon(Icons.add_call),
           ),
@@ -27,7 +29,7 @@ class CallsListScreen extends ConsumerWidget {
       ),
       body: calls.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Ошибка: $e')),
+        error: (e, _) => Center(child: Text(l.commonError('$e'))),
         data: (rows) {
           if (rows.isEmpty) {
             return Center(
@@ -42,13 +44,13 @@ class CallsListScreen extends ConsumerWidget {
                       color: Theme.of(context).colorScheme.outlineVariant,
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      'История звонков пуста',
+                    Text(
+                      l.callsEmpty,
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Голосовые и видеозвонки появятся в одном из следующих обновлений.',
+                      l.callsEmptyHint,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
@@ -72,9 +74,9 @@ class CallsListScreen extends ConsumerWidget {
                 ),
                 title: Text(
                   (row['peer_name'] as String?) ??
-                      'Контакт ${row['peer_id'] ?? '?'}',
+                      l.contactPlaceholder('${row['peer_id'] ?? '?'}'),
                 ),
-                subtitle: Text(_formatCallRow(row)),
+                subtitle: Text(_formatCallRow(l, row)),
                 trailing: IconButton(
                   onPressed: () => _showStub(context),
                   icon: const Icon(Icons.call),
@@ -93,32 +95,27 @@ class CallsListScreen extends ConsumerWidget {
 
   void _showStub(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Голосовые и видеозвонки в разработке. '
-          'Опкоды реал-тайм медиа MAX пока не реверснуты.',
-        ),
-      ),
+      SnackBar(content: Text(L.of(context).callsEmptyHint)),
     );
   }
 
-  String _formatCallRow(Map<String, Object?> row) {
+  String _formatCallRow(L l, Map<String, Object?> row) {
     final direction = (row['direction'] as String?) ?? 'incoming';
     final missed = (row['missed'] as int? ?? 0) == 1;
     final ts = (row['started_at_ms'] as num?)?.toInt() ?? 0;
     final dur = (row['duration_ms'] as num?)?.toInt() ?? 0;
     final label = missed
-        ? 'Пропущенный'
+        ? l.callMissed
         : direction == 'incoming'
-            ? 'Входящий'
-            : 'Исходящий';
+            ? l.callIncoming
+            : l.callOutgoing;
     final date = DateTime.fromMillisecondsSinceEpoch(ts);
-    final dateStr = DateFormat('d MMM HH:mm', 'ru_RU').format(date);
+    final dateStr = DateFormat('d MMM HH:mm').format(date);
     final mins = dur ~/ 60000;
     final secs = (dur % 60000) ~/ 1000;
     final durStr = mins > 0
-        ? '$mins:${secs.toString().padLeft(2, "0")} мин'
-        : (dur > 0 ? '$secs сек' : '');
+        ? '$mins:${secs.toString().padLeft(2, "0")}'
+        : (dur > 0 ? '$secs s' : '');
     return durStr.isEmpty ? '$label · $dateStr' : '$label · $dateStr · $durStr';
   }
 }

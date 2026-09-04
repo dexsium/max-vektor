@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/max/models/contact.dart';
@@ -24,11 +25,11 @@ class ProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Профиль'),
+        title: Text(L.of(context).profileTitle),
       ),
       body: contactAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Ошибка: $e')),
+        error: (e, _) => Center(child: Text(L.of(context).commonError('$e'))),
         data: (c) {
           final displayName = c?.name ?? title ?? 'Чат $chatId';
           final phone = c?.phone;
@@ -79,22 +80,22 @@ class ProfileScreen extends ConsumerWidget {
                 children: [
                   _ActionTile(
                     icon: Icons.chat_bubble_outline,
-                    label: 'Чат',
+                    label: L.of(context).profChat,
                     onTap: () => Navigator.of(context).pop(),
                   ),
                   _ActionTile(
                     icon: Icons.call_outlined,
-                    label: 'Звонок',
+                    label: L.of(context).chatCall,
                     onTap: () => _stub(context, 'Звонок'),
                   ),
                   _ActionTile(
                     icon: Icons.videocam_outlined,
-                    label: 'Видео',
+                    label: L.of(context).videoTitle,
                     onTap: () => _stub(context, 'Видеозвонок'),
                   ),
                   _ActionTile(
                     icon: Icons.search,
-                    label: 'Поиск',
+                    label: L.of(context).commonSearch,
                     onTap: () => _stub(context, 'Поиск в чате'),
                   ),
                 ],
@@ -103,7 +104,7 @@ class ProfileScreen extends ConsumerWidget {
               const Divider(height: 0),
               ListTile(
                 leading: const Icon(Icons.collections_outlined),
-                title: const Text('Медиа, файлы и ссылки'),
+                title: Text(L.of(context).profMediaFilesLinks),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
@@ -114,8 +115,8 @@ class ProfileScreen extends ConsumerWidget {
               const Divider(height: 0),
               ListTile(
                 leading: const Icon(Icons.notifications_outlined),
-                title: const Text('Уведомления'),
-                subtitle: const Text('Включены'),
+                title: Text(L.of(context).profNotifications),
+                subtitle: Text(L.of(context).profEnabled),
                 trailing: Switch(
                   value: true,
                   onChanged: (_) => _stub(context, 'Mute'),
@@ -124,13 +125,13 @@ class ProfileScreen extends ConsumerWidget {
               const Divider(height: 0),
               ListTile(
                 leading: const Icon(Icons.push_pin_outlined),
-                title: const Text('Закрепить чат'),
+                title: Text(L.of(context).profPinChat),
                 onTap: () => _stub(context, 'Закрепление чата'),
               ),
               const Divider(height: 0),
               ListTile(
                 leading: const Icon(Icons.archive_outlined),
-                title: const Text('Архивировать'),
+                title: Text(L.of(context).chatArchive),
                 onTap: () => _stub(context, 'Архивация'),
               ),
               const Divider(height: 0),
@@ -138,7 +139,7 @@ class ProfileScreen extends ConsumerWidget {
                 iconColor: scheme.error,
                 textColor: scheme.error,
                 leading: const Icon(Icons.delete_outline),
-                title: const Text('Очистить историю'),
+                title: Text(L.of(context).profClearHistory),
                 onTap: () => _confirmClear(context, ref),
               ),
               const SizedBox(height: 32),
@@ -153,7 +154,7 @@ class ProfileScreen extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Очистить историю?'),
+        title: Text(L.of(context).profClearHistoryTitle),
         content: const Text(
           'Сообщения и вложения будут удалены только локально. '
           'На сервере останется как есть.',
@@ -161,11 +162,11 @@ class ProfileScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Отмена'),
+            child: Text(L.of(context).commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Очистить'),
+            child: Text(L.of(context).commonClear),
           ),
         ],
       ),
@@ -184,7 +185,7 @@ class ProfileScreen extends ConsumerWidget {
     );
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('История очищена локально')),
+        SnackBar(content: Text(L.of(context).profHistoryCleared)),
       );
     }
   }

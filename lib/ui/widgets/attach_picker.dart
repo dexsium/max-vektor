@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../data/max/models/upload_input.dart';
@@ -21,7 +22,7 @@ class AttachPicker {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Фото из галереи'),
+              title: Text(L.of(context).attachPhotoGallery),
               onTap: () async {
                 final picked = await _pickPhotos();
                 if (ctx.mounted) Navigator.of(ctx).pop(picked);
@@ -29,7 +30,7 @@ class AttachPicker {
             ),
             ListTile(
               leading: const Icon(Icons.video_library_outlined),
-              title: const Text('Видео из галереи'),
+              title: Text(L.of(context).attachVideoGallery),
               onTap: () async {
                 final picked = await _pickGalleryVideo();
                 if (ctx.mounted) Navigator.of(ctx).pop(picked);
@@ -37,7 +38,7 @@ class AttachPicker {
             ),
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Снять фото'),
+              title: Text(L.of(context).attachTakePhoto),
               onTap: () async {
                 final picked = await _pickCamera(video: false);
                 if (ctx.mounted) Navigator.of(ctx).pop(picked);
@@ -45,7 +46,7 @@ class AttachPicker {
             ),
             ListTile(
               leading: const Icon(Icons.videocam_outlined),
-              title: const Text('Снять видео'),
+              title: Text(L.of(context).attachTakeVideo),
               onTap: () async {
                 final picked = await _pickCamera(video: true);
                 if (ctx.mounted) Navigator.of(ctx).pop(picked);
@@ -53,7 +54,7 @@ class AttachPicker {
             ),
             ListTile(
               leading: const Icon(Icons.insert_drive_file_outlined),
-              title: const Text('Файл'),
+              title: Text(L.of(context).attachFile),
               onTap: () async {
                 final picked = await _pickFiles();
                 if (ctx.mounted) Navigator.of(ctx).pop(picked);

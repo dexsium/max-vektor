@@ -16,6 +16,7 @@ import 'storage_screen.dart';
 import 'diagnostics_screen.dart';
 import 'profile_edit_screen.dart';
 import 'qr_login_scanner_screen.dart';
+import '../widgets/accounts_section.dart';
 import '../widgets/app_snack.dart';
 
 /// Экран настроек.
@@ -53,6 +54,12 @@ class SettingsScreen extends ConsumerWidget {
               onEdit: () => _push(context, const ProfileEditScreen()),
               onAccounts: () => _push(context, const AccountsScreen()),
             ),
+
+            // Список аккаунтов и «Добавить аккаунт» — карточкой под шапкой,
+            // как в официальном приложении.
+            _Group(children: const [
+              AccountsSection(showHeader: false, showFooter: false),
+            ]),
 
             _Group(children: [
               _Tile(
@@ -119,15 +126,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ]),
 
-            // Мультиаккаунт — наша особенность, которой нет в официальном
-            // приложении, но она ключевая для Max Vektor.
             _Group(children: [
-              _Tile(
-                icon: Icons.switch_account_outlined,
-                title: l.settingsAccounts,
-                subtitle: l.settingsAccountsSub,
-                onTap: () => _push(context, const AccountsScreen()),
-              ),
               _Tile(
                 icon: Icons.qr_code_scanner,
                 title: l.settingsQrLogin,
@@ -203,8 +202,6 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 8),
             Text('Протокол: app ${MaxProto.appVersion}, '
                 'proto v${MaxProto.protoVersion}'),
-            const SizedBox(height: 8),
-            Text('${l.aboutSourceCode}\n${AppMeta.upstreamUrl}'),
           ],
         ),
         actions: [
@@ -278,12 +275,12 @@ class _Header extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                tooltip: 'Вход по QR-коду',
+                tooltip: L.of(context).settingsQrLogin,
                 icon: const Icon(Icons.qr_code_2),
                 onPressed: onQr,
               ),
               IconButton(
-                tooltip: 'Аккаунты',
+                tooltip: L.of(context).settingsAccounts,
                 icon: const Icon(Icons.edit_outlined),
                 onPressed: onAccounts,
               ),

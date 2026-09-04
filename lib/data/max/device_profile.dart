@@ -22,9 +22,10 @@ import '../../core/constants.dart';
 class DeviceProfile {
   const DeviceProfile._();
 
-  static Future<Map<String, Object?>> userAgent(String deviceType) async {
+  static Future<Map<String, Object?>> userAgent(String deviceType,
+      {String? seed}) async {
     if (deviceType == 'IOS') {
-      return _iosUserAgent();
+      return _iosUserAgent(seed);
     }
     if (deviceType != 'ANDROID') {
       return minimal(deviceType);
@@ -82,31 +83,41 @@ class DeviceProfile {
     };
   }
 
-  /// Полный userAgent для iOS-сборки (deviceType=IOS). Тот же набор полей и
-  /// порядок, что у ANDROID, но pushDeviceType=APNS и реальные поля iPhone.
-  /// Имя устройства берём как модель (iPhone15,2), НЕ пользовательское имя
-  /// (то — PII). ВНИМАНИЕ: appVersion/buildNumber здесь пока от Android-сборки;
-  /// для полной маскировки подставь версию ОФИЦИАЛЬНОГО iOS-приложения MAX.
-  static Future<Map<String, Object?>> _iosUserAgent() async {
-    var osVersion = '17.0';
-    var deviceName = 'iPhone';
-    try {
-      final info = await DeviceInfoPlugin().iosInfo;
-      if (info.systemVersion.isNotEmpty) osVersion = info.systemVersion;
-      final model = info.utsname.machine.trim();
-      deviceName = model.isNotEmpty ? model : info.model;
-    } catch (_) {
-      // Нет нативного канала (не iOS/тест) — дефолты.
-    }
+  /// Согласованные iPhone-профили: (модель utsname.machine, разрешение экрана
+  /// в пикселях). Пары модель↔экран реальные, чтобы отпечаток был внутренне
+  /// непротиворечивым (несостыковка модель/экран для антифрода заметнее).
+  static const _iphones = <(String, String)>[
+    ('iPhone13,1', '1080x2340'), // 12 mini
+    ('iPhone13,2', '1170x2532'), // 12 / 12 Pro
+    ('iPhone13,4', '1284x2778'), // 12 Pro Max
+    ('iPhone14,2', '1170x2532'), // 13 Pro
+    ('iPhone14,3', '1284x2778'), // 13 Pro Max
+    ('iPhone14,5', '1170x2532'), // 13
+    ('iPhone14,7', '1170x2532'), // 14
+    ('iPhone14,8', '1284x2778'), // 14 Plus
+    ('iPhone15,2', '1179x2556'), // 14 Pro
+    ('iPhone15,3', '1290x2796'), // 14 Pro Max
+    ('iPhone15,4', '1179x2556'), // 15
+    ('iPhone15,5', '1290x2796'), // 15 Plus
+    ('iPhone16,1', '1179x2556'), // 15 Pro
+    ('iPhone16,2', '1290x2796'), // 15 Pro Max
+  ];
 
-    var screen = '1170x2532';
-    try {
-      final view = ui.PlatformDispatcher.instance.implicitView;
-      final size = view?.physicalSize;
-      if (size != null && size.width > 0 && size.height > 0) {
-        screen = '${size.width.round()}x${size.height.round()}';
-      }
-    } catch (_) {}
+  static const _iosVersions = <String>[
+    '17.4.1', '17.5.1', '17.6.1', '18.0.1', '18.1.1',
+  ];
+
+  /// userAgent для deviceType=IOS. Чтобы наш клиент выглядел для сервера как
+  /// ОТДЕЛЬНЫЙ iPhone (а не то же устройство, что официальное приложение —
+  /// иначе сервер по совпадающему отпечатку передаёт сессию нам и выкидывает
+  /// официалку), поля устройства СИНТЕТИЧЕСКИЕ, а НЕ реальные: модель, экран и
+  /// версия iOS берутся детерминированно из [seed] (стабильного deviceId
+  /// аккаунта). Так профиль постоянен для аккаунта и отличается от настоящего
+  /// телефона. deviceType/pushDeviceType остаются iOS/APNS.
+  static Future<Map<String, Object?>> _iosUserAgent(String? seed) async {
+    final h = _stableHash(seed ?? 'max-vektor');
+    final model = _iphones[h % _iphones.length];
+    final osVersion = _iosVersions[(h ~/ 7) % _iosVersions.length];
 
     return {
       'deviceType': 'IOS',
@@ -117,10 +128,21 @@ class DeviceProfile {
       'osVersion': osVersion,
       'locale': MaxProto.locale,
       'deviceLocale': MaxProto.deviceLocale,
-      'deviceName': deviceName,
-      'screen': screen,
+      'deviceName': model.$1,
+      'screen': model.$2,
       'timezone': _ianaTimezone(),
     };
+  }
+
+  /// Стабильный (между запусками) хеш строки — FNV-1a 32-bit. String.hashCode
+  /// в Dart не гарантирован между запусками, поэтому свой.
+  static int _stableHash(String s) {
+    var hash = 0x811c9dc5;
+    for (final c in s.codeUnits) {
+      hash ^= c;
+      hash = (hash * 0x01000193) & 0xffffffff;
+    }
+    return hash;
   }
 
   /// Проверенный рабочим python-клиентом минимум — для WEB и fallback.

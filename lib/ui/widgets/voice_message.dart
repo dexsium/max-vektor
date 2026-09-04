@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 
 import '../../data/max/models/attach.dart';
 
@@ -73,7 +74,7 @@ class _VoiceMessageState extends State<VoiceMessage> {
     final src = _source;
     if (src == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Аудио недоступно')),
+        SnackBar(content: Text(L.of(context).audioUnavailable)),
       );
       return;
     }
@@ -84,7 +85,7 @@ class _VoiceMessageState extends State<VoiceMessage> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Не удалось воспроизвести аудио')),
+          SnackBar(content: Text(L.of(context).audioPlayFailed)),
         );
       }
     } finally {

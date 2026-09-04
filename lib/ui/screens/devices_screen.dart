@@ -173,7 +173,7 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
       await _load();
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(SnackBar(content: Text('Не удалось: $e')));
+        messenger.showSnackBar(SnackBar(content: Text(L.of(context).commonError('$e'))));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -439,10 +439,10 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
           children: [
             const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
             const SizedBox(height: 12),
-            Text('Не удалось загрузить сессии:\n$_error',
+            Text(L.of(context).devLoadFailed('$_error'),
                 textAlign: TextAlign.center),
             const SizedBox(height: 12),
-            FilledButton(onPressed: _load, child: const Text('Повторить')),
+            FilledButton(onPressed: _load, child: Text(L.of(context).commonRetry)),
           ],
         ),
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/max/models/chat.dart';
@@ -23,16 +24,16 @@ class _ForwardPickerScreenState extends ConsumerState<ForwardPickerScreen> {
     final chatsAsync = ref.watch(chatsListProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Переслать в'),
+        title: Text(L.of(context).fwdPickTitle),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(64),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
             child: TextField(
               onChanged: (v) => setState(() => _query = v.toLowerCase()),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 prefixIcon: Icon(Icons.search),
-                hintText: 'Поиск чата',
+                hintText: L.of(context).fwdSearchChat,
               ),
             ),
           ),
@@ -40,7 +41,7 @@ class _ForwardPickerScreenState extends ConsumerState<ForwardPickerScreen> {
       ),
       body: chatsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Ошибка: $e')),
+        error: (e, _) => Center(child: Text(L.of(context).commonError('$e'))),
         data: (chats) {
           final visible = _query.isEmpty
               ? chats
@@ -48,7 +49,7 @@ class _ForwardPickerScreenState extends ConsumerState<ForwardPickerScreen> {
                   .where((c) => (c.title ?? '').toLowerCase().contains(_query))
                   .toList();
           if (visible.isEmpty) {
-            return const Center(child: Text('Ничего не найдено'));
+            return Center(child: Text(L.of(context).commonNothingFound));
           }
           return ListView.separated(
             itemCount: visible.length,
@@ -75,13 +76,13 @@ class _ForwardPickerScreenState extends ConsumerState<ForwardPickerScreen> {
       await ctrl.send(widget.text);
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Переслано в ${c.title ?? "чат ${c.id}"}')),
+        SnackBar(content: Text(L.of(context).fwdForwardedTo(c.title ?? '${c.id}'))),
       );
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
       setState(() => _sending = false);
-      messenger.showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      messenger.showSnackBar(SnackBar(content: Text(L.of(context).commonError('$e'))));
     }
   }
 }

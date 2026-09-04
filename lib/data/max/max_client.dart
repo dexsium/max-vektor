@@ -69,7 +69,7 @@ class MaxClient {
 
   /// Источник поля `userAgent` для INIT по текущему deviceType. Если null или
   /// бросает — используется минимальный проверенный набор. См. DeviceProfile.
-  final Future<Map<String, Object?>> Function(String deviceType)?
+  final Future<Map<String, Object?>> Function(String deviceType, {String? seed})?
       userAgentLoader;
 
   /// Вызывается когда сервер отверг сохранённый токен (FAIL_LOGIN_TOKEN) —
@@ -335,7 +335,10 @@ class MaxClient {
     final loader = userAgentLoader;
     if (loader == null) return _minimalUserAgent();
     try {
-      final ua = await loader(_deviceType);
+      // seed = стабильный deviceId аккаунта: синтетический iPhone-профиль
+      // постоянен для аккаунта и отличается от реального устройства (чтобы не
+      // выглядеть тем же устройством, что официальное приложение).
+      final ua = await loader(_deviceType, seed: _deviceId);
       if (ua.isEmpty) return _minimalUserAgent();
       return ua;
     } catch (e) {

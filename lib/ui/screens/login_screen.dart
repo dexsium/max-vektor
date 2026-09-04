@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
 import '../../core/countries.dart';
+import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../state/session_controller.dart';
@@ -92,7 +93,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: IconButton(
-                    tooltip: 'Назад',
+                    tooltip: L.of(context).loginBack,
                     icon: const Icon(Icons.arrow_back),
                     onPressed: _busy ? null : () => ctrl.cancelAddAccount(),
                   ),
@@ -169,28 +170,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  String _title(_Step step) => switch (step) {
-        _Step.phone => AppMeta.name,
-        _Step.code => 'Введите код',
-        _Step.name => 'Как вас зовут?',
-        _Step.password => 'Пароль двухфакторной защиты',
-        _Step.token => 'Вход по токену',
-      };
+  String _title(_Step step) {
+    final l = L.of(context);
+    return switch (step) {
+      _Step.phone => AppMeta.name,
+      _Step.code => l.loginCodeTitle,
+      _Step.name => l.loginNameTitle,
+      _Step.password => l.login2faTitle,
+      _Step.token => l.loginTokenTitle,
+    };
+  }
 
   String _subtitle(_Step step) {
+    final l = L.of(context);
     final session = ref.read(sessionProvider);
     return switch (step) {
-      _Step.phone => 'Введите номер телефона — пришлём код подтверждения.',
+      _Step.phone => l.loginPhonePrompt,
       // Канал доставки сервер не называет: при установленном официальном
       // приложении код обычно приходит push-ом в него, а не отдельной SMS.
-      _Step.code => 'Отправили код на ${session.phone ?? 'ваш номер'}. '
-          'Он приходит в SMS или в официальное приложение MAX.',
-      _Step.name => 'Этого номера ещё нет в MAX. Укажите имя — '
-          'и аккаунт будет создан.',
-      _Step.password => 'На аккаунте включён пароль. Введите его, '
-          'чтобы завершить вход.',
-      _Step.token => 'Готовый auth-token из веб-версии web.max.ru: '
-          'DevTools → Application → хранилище. Код подтверждения не нужен.',
+      _Step.code => l.loginCodePrompt(session.phone ?? ''),
+      _Step.name => l.loginNamePrompt,
+      _Step.password => l.login2faPrompt,
+      _Step.token => 'auth-token · web.max.ru → DevTools → Application',
     };
   }
 
@@ -242,8 +243,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               controller: _phoneCtrl,
               keyboardType: TextInputType.phone,
               autofillHints: const [AutofillHints.telephoneNumber],
-              decoration: const InputDecoration(
-                labelText: 'Номер телефона',
+              decoration: InputDecoration(
+                labelText: L.of(context).loginPhoneField,
                 hintText: '999 123-45-67',
               ),
               onSubmitted: _busy
@@ -255,7 +256,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
       const SizedBox(height: 20),
       _PrimaryButton(
-        label: 'Получить код',
+        label: L.of(context).loginGetCode,
         busy: _busy,
         onPressed: () => _run(() => ctrl.requestSms(_fullPhone())),
       ),
@@ -289,7 +290,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
       const SizedBox(height: 20),
       _PrimaryButton(
-        label: 'Подтвердить',
+        label: L.of(context).loginConfirm,
         busy: _busy,
         onPressed: () => _run(() => ctrl.submitSmsCode(_codeCtrl.text.trim())),
       ),
@@ -303,13 +304,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               },
         child: Text(
           countdown > 0
-              ? 'Запросить код заново через $countdown с'
-              : 'Запросить код заново',
+              ? L.of(context).loginResendIn('$countdown')
+              : L.of(context).loginResend,
         ),
       ),
       if (attempts != null)
         Text(
-          'Осталось запросов кода: $attempts',
+          L.of(context).loginAttemptsLeft(attempts),
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall,
         ),
@@ -323,9 +324,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         autofocus: true,
         textCapitalization: TextCapitalization.words,
         autofillHints: const [AutofillHints.givenName],
-        decoration: const InputDecoration(
-          labelText: 'Имя',
-          prefixIcon: Icon(Icons.person_outline),
+        decoration: InputDecoration(
+          labelText: L.of(context).loginFirstName,
+          prefixIcon: const Icon(Icons.person_outline),
         ),
       ),
       const SizedBox(height: 12),
@@ -333,9 +334,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         controller: _lastNameCtrl,
         textCapitalization: TextCapitalization.words,
         autofillHints: const [AutofillHints.familyName],
-        decoration: const InputDecoration(
-          labelText: 'Фамилия (необязательно)',
-          prefixIcon: Icon(Icons.badge_outlined),
+        decoration: InputDecoration(
+          labelText: L.of(context).loginLastNameOptional,
+          prefixIcon: const Icon(Icons.badge_outlined),
         ),
         onSubmitted: _busy ? null : (_) => _submitRegistration(ctrl),
       ),
@@ -343,13 +344,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       Text(
         // Сервер MAX проверяет имя: минимум два символа, без цифр, эмодзи
         // и знаков препинания, плюс фильтр запрещённых слов.
-        'Не короче двух символов, только буквы — без цифр, эмодзи и '
-        'знаков препинания.',
+        L.of(context).loginNameHint,
         style: Theme.of(context).textTheme.bodySmall,
       ),
       const SizedBox(height: 20),
       _PrimaryButton(
-        label: 'Создать аккаунт',
+        label: L.of(context).loginCreateAccount,
         busy: _busy,
         onPressed: () => _submitRegistration(ctrl),
       ),
@@ -363,7 +363,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (first.length < 2) {
       setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Имя должно быть не короче двух букв')),
+        SnackBar(content: Text(L.of(context).loginNameTooShort)),
       );
       return;
     }
@@ -386,10 +386,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         autocorrect: false,
         autofocus: true,
         decoration: InputDecoration(
-          labelText: 'Пароль',
+          labelText: L.of(context).loginPassword,
           prefixIcon: const Icon(Icons.lock_outline),
           suffixIcon: IconButton(
-            tooltip: _pwVisible ? 'Скрыть' : 'Показать',
+            tooltip: _pwVisible ? L.of(context).loginHide : L.of(context).loginShow,
             icon: Icon(
               _pwVisible
                   ? Icons.visibility_off_outlined
@@ -403,7 +403,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
       const SizedBox(height: 20),
       _PrimaryButton(
-        label: 'Войти',
+        label: L.of(context).loginSignIn,
         busy: _busy,
         onPressed: () => _run(() => ctrl.submit2fa(_pwCtrl.text)),
       ),
@@ -418,15 +418,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         maxLines: 6,
         autocorrect: false,
         enableSuggestions: false,
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           labelText: 'auth-token',
-          hintText: 'Вставьте токен сюда…',
+          hintText: L.of(context).loginTokenHint,
           alignLabelWithHint: true,
         ),
       ),
       const SizedBox(height: 20),
       _PrimaryButton(
-        label: 'Войти по токену',
+        label: L.of(context).loginTokenButton,
         busy: _busy,
         onPressed: () => _run(() => ctrl.loginWithToken(_tokenCtrl.text)),
       ),
@@ -448,13 +448,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ctrl.backToPhone();
               },
         icon: const Icon(Icons.arrow_back, size: 18),
-        label: const Text('Изменить номер'),
+        label: Text(L.of(context).loginChangeNumber),
       );
     }
     if (step == _Step.name) {
       return Text(
-        'Имя увидят собеседники в MAX. Его можно изменить позже '
-        'в настройках профиля.',
+        L.of(context).loginNameVisibleHint,
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.bodySmall,
       );
@@ -462,7 +461,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return TextButton(
       onPressed: _busy ? null : () => setState(() => _tokenMode = !_tokenMode),
       child: Text(
-        _tokenMode ? 'Войти по номеру телефона' : 'У меня есть auth-token',
+        _tokenMode
+            ? L.of(context).loginByPhone
+            : L.of(context).loginHaveToken,
       ),
     );
   }
@@ -536,14 +537,26 @@ class _CountryPickerState extends State<_CountryPicker> {
           height: MediaQuery.of(context).size.height * 0.75,
           child: Column(
             children: [
+              // Крестик закрытия окна выбора страны (справа сверху).
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8, top: 4),
+                  child: IconButton(
+                    tooltip: L.of(context).commonClose,
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: TextField(
                   controller: _searchCtrl,
                   autofocus: true,
-                  decoration: const InputDecoration(
-                    hintText: 'Поиск страны или кода',
-                    prefixIcon: Icon(Icons.search),
+                  decoration: InputDecoration(
+                    hintText: L.of(context).loginSearchCountry,
+                    prefixIcon: const Icon(Icons.search),
                   ),
                   onChanged: (v) => setState(() => _query = v),
                 ),

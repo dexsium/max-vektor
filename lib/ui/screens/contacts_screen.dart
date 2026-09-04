@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/max/models/contact.dart';
+import '../../l10n/app_localizations.dart';
 import '../../data/repositories/contacts_repository.dart';
 import '../../state/chats_controller.dart';
 import '../../state/contacts_controller.dart';
@@ -31,20 +32,20 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Контакты'),
+        title: Text(L.of(context).navContacts),
         actions: [
           IconButton(
-            tooltip: _showSearch ? 'Скрыть поиск' : 'Поиск',
+            tooltip: _showSearch ? L.of(context).contactsHideSearch : L.of(context).commonSearch,
             onPressed: _toggleSearch,
             icon: Icon(_showSearch ? Icons.search_off : Icons.search),
           ),
           IconButton(
-            tooltip: 'Импорт из адресной книги',
+            tooltip: L.of(context).contactsImport,
             onPressed: _runImport,
             icon: const Icon(Icons.cloud_download_outlined),
           ),
           IconButton(
-            tooltip: 'Добавить по номеру',
+            tooltip: L.of(context).contactsAddByNumber,
             onPressed: _showAddDialog,
             icon: const Icon(Icons.person_add_alt),
           ),
@@ -58,7 +59,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
                     controller: _searchCtrl,
                     autofocus: true,
                     decoration: InputDecoration(
-                      hintText: 'Поиск',
+                      hintText: L.of(context).commonSearch,
                       isDense: true,
                       filled: true,
                       border: OutlineInputBorder(
@@ -94,7 +95,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
       ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Ошибка: $e')),
+        error: (e, _) => Center(child: Text(L.of(context).commonError('$e'))),
         data: (items) {
           if (items.isEmpty) {
             return _EmptyState(
@@ -137,19 +138,20 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
 
   Future<void> _confirmDelete(MaxContact c) async {
     final messenger = ScaffoldMessenger.of(context);
+    final l = L.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Удалить контакт?'),
-        content: Text(c.name ?? c.phone ?? 'Контакт ${c.id}'),
+        title: Text(L.of(context).contactsDeleteTitle),
+        content: Text(c.name ?? c.phone ?? L.of(context).contactPlaceholder('${c.id}')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Отмена'),
+            child: Text(L.of(context).commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Удалить'),
+            child: Text(L.of(context).commonDelete),
           ),
         ],
       ),
@@ -157,35 +159,32 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
     if (ok != true) return;
     try {
       await ref.read(contactsListProvider.notifier).removeContact(c.id);
-      messenger.showSnackBar(const SnackBar(content: Text('Контакт удалён')));
+      messenger.showSnackBar(SnackBar(content: Text(l.contactDeleted)));
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      messenger.showSnackBar(SnackBar(content: Text(l.commonError('$e'))));
     }
   }
 
   Future<void> _runImport() async {
     final messenger = ScaffoldMessenger.of(context);
+    final l = L.of(context);
+    final rootNav = Navigator.of(context, rootNavigator: true);
 
     // Массовый резолв номеров — поведенческий бан-сигнал MAX. Предупреждаем
     // и берём явное согласие, прежде чем перечислять справочник.
     final proceed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Импорт контактов'),
-        content: const Text(
-          'MAX считает массовую проверку номеров подозрительной и может '
-          'заблокировать номер. Чтобы снизить риск, проверю не больше '
-          '${ContactsRepository.bulkLookupCap} номеров, по одному раз в '
-          '~1.5 секунды. Это займёт около минуты. Продолжить?',
-        ),
+        title: Text(l.contactsImportTitle),
+        content: Text(l.contactsImportWarn('${ContactsRepository.bulkLookupCap}')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Отмена'),
+            child: Text(L.of(context).commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Продолжить'),
+            child: Text(L.of(context).commonContinue),
           ),
         ],
       ),
@@ -202,7 +201,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
       barrierDismissible: false,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('Импорт контактов'),
+          title: Text(l.contactsImportTitle),
           content: ValueListenableBuilder<ImportProgress>(
             valueListenable: progressNotifier,
             builder: (_, p, __) {
@@ -216,8 +215,8 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
                   const SizedBox(height: 12),
                   Text(
                     p.total == 0
-                        ? 'Чтение адресной книги...'
-                        : 'Проверка: ${p.done} из ${p.total}',
+                        ? L.of(context).contactsReadingBook
+                        : L.of(context).contactsChecking('${p.done}', '${p.total}'),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -235,10 +234,10 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
             onProgress: (p) => progressNotifier.value = p,
           );
       if (!dismissed && mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
+        rootNav.pop();
       }
       final msg = StringBuffer(
-        'Найдено в MAX: ${result.found} из ${result.checked}',
+        l.contactsFoundInMax('${result.found}', '${result.checked}'),
       );
       if (result.skipped > 0) {
         msg.write('. Пропущено сверх лимита: ${result.skipped}');
@@ -246,37 +245,38 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
       messenger.showSnackBar(SnackBar(content: Text(msg.toString())));
     } catch (e) {
       if (!dismissed && mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
+        rootNav.pop();
       }
-      messenger.showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      messenger.showSnackBar(SnackBar(content: Text(l.commonError('$e'))));
     } finally {
       progressNotifier.dispose();
     }
   }
 
   Future<void> _showAddDialog() async {
+    final l = L.of(context);
     final ctrl = TextEditingController();
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('Найти по номеру'),
+          title: Text(L.of(context).contactsFindByNumber),
           content: TextField(
             controller: ctrl,
             keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: '+79991234567',
-              labelText: 'Телефон',
+              labelText: L.of(context).contactsPhone,
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Отмена'),
+              child: Text(L.of(context).commonCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
-              child: const Text('Найти'),
+              child: Text(L.of(context).commonFind),
             ),
           ],
         );
@@ -290,10 +290,10 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
       final c = await repo.findByPhone(result);
       await ref.read(contactsListProvider.notifier).refresh();
       messenger.showSnackBar(
-        SnackBar(content: Text('Найден: ${c.name ?? c.phone ?? c.id}')),
+        SnackBar(content: Text(l.contactsFound('${c.name ?? c.phone ?? c.id}'))),
       );
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      messenger.showSnackBar(SnackBar(content: Text(l.commonError('$e'))));
     }
   }
 }
@@ -312,11 +312,11 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isSearch) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Text(
-            'Ничего не найдено',
+            L.of(context).commonNothingFound,
             textAlign: TextAlign.center,
           ),
         ),
@@ -328,21 +328,21 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Контактов нет. Импортируй адресную книгу или добавь номер вручную.',
+            Text(
+              L.of(context).contactsEmpty,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: onImport,
               icon: const Icon(Icons.cloud_download_outlined),
-              label: const Text('Импорт из телефона'),
+              label: Text(L.of(context).contactsImport),
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: onAdd,
               icon: const Icon(Icons.person_add_alt),
-              label: const Text('Добавить по номеру'),
+              label: Text(L.of(context).contactsAddByNumber),
             ),
           ],
         ),
@@ -410,7 +410,7 @@ class _GroupedContactsList extends StatelessWidget {
           },
           child: ListTile(
             leading: CircleAvatar(child: Text(initial)),
-            title: Text(c.name ?? c.phone ?? 'Контакт ${c.id}'),
+            title: Text(c.name ?? c.phone ?? L.of(context).contactPlaceholder('${c.id}')),
             subtitle: c.phone == null ? null : Text(c.phone!),
             trailing: const Icon(Icons.chat_bubble_outline),
             onTap: () => onTap(c),

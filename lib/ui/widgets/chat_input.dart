@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 
 import '../../data/max/models/upload_input.dart';
 import 'attach_picker.dart';
@@ -109,7 +110,7 @@ class _ChatInputState extends State<ChatInput> {
                       }
                     },
               icon: const Icon(Icons.attach_file),
-              tooltip: 'Прикрепить',
+              tooltip: L.of(context).inputAttach,
             ),
             Expanded(
               child: TextField(
@@ -117,8 +118,8 @@ class _ChatInputState extends State<ChatInput> {
                 minLines: 1,
                 maxLines: 5,
                 textInputAction: TextInputAction.newline,
-                decoration: const InputDecoration(
-                  hintText: 'Сообщение',
+                decoration: InputDecoration(
+                  hintText: L.of(context).inputMessage,
                 ),
               ),
             ),

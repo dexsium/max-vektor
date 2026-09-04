@@ -41,7 +41,7 @@ Future<void> main(List<String> argv) async {
       filter: ProductionFilter(),
       printer: SimplePrinter(),
     ),
-    userAgentLoader: (deviceType) async => _iosUserAgent(deviceType),
+    userAgentLoader: (deviceType, {seed}) async => _iosUserAgent(deviceType),
   );
   try {
     await client.connect(deviceType: 'IOS');

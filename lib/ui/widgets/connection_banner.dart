@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/max/max_client.dart';
@@ -17,9 +18,9 @@ class ConnectionBanner extends ConsumerWidget {
     }
     final scheme = Theme.of(context).colorScheme;
     final (label, showSpinner) = switch (state) {
-      MaxConnectionState.connecting => ('Подключение…', true),
-      MaxConnectionState.reconnecting => ('Переподключение…', true),
-      MaxConnectionState.disconnected => ('Нет соединения', false),
+      MaxConnectionState.connecting => (L.of(context).connConnecting, true),
+      MaxConnectionState.reconnecting => (L.of(context).connReconnecting, true),
+      MaxConnectionState.disconnected => (L.of(context).connNoConnection, false),
       MaxConnectionState.connected => ('', false),
     };
     return Material(

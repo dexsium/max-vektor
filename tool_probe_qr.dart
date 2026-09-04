@@ -31,7 +31,7 @@ Future<void> main() async {
       filter: ProductionFilter(),
       printer: SimplePrinter(),
     ),
-    userAgentLoader: (d) async => _iosUa(d),
+    userAgentLoader: (d, {seed}) async => _iosUa(d),
   );
   try {
     await client.connect(deviceType: 'WEB');

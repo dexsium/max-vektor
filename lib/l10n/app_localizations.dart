@@ -5,8 +5,15 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_de.dart';
 import 'app_localizations_en.dart';
+import 'app_localizations_es.dart';
+import 'app_localizations_fr.dart';
+import 'app_localizations_it.dart';
+import 'app_localizations_pt.dart';
 import 'app_localizations_ru.dart';
+import 'app_localizations_tr.dart';
+import 'app_localizations_uk.dart';
 
 // ignore_for_file: type=lint
 
@@ -93,8 +100,15 @@ abstract class L {
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
+    Locale('de'),
     Locale('en'),
+    Locale('es'),
+    Locale('fr'),
+    Locale('it'),
+    Locale('pt'),
     Locale('ru'),
+    Locale('tr'),
+    Locale('uk'),
   ];
 
   /// No description provided for @commonCancel.
@@ -702,6 +716,888 @@ abstract class L {
   /// In ru, this message translates to:
   /// **'Активных сессий не найдено'**
   String get devEmpty;
+
+  /// No description provided for @navContacts.
+  ///
+  /// In ru, this message translates to:
+  /// **'Контакты'**
+  String get navContacts;
+
+  /// No description provided for @navCalls.
+  ///
+  /// In ru, this message translates to:
+  /// **'Звонки'**
+  String get navCalls;
+
+  /// No description provided for @navChats.
+  ///
+  /// In ru, this message translates to:
+  /// **'Чаты'**
+  String get navChats;
+
+  /// No description provided for @navSettings.
+  ///
+  /// In ru, this message translates to:
+  /// **'Настройки'**
+  String get navSettings;
+
+  /// No description provided for @loginBack.
+  ///
+  /// In ru, this message translates to:
+  /// **'Назад'**
+  String get loginBack;
+
+  /// No description provided for @loginPhoneTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Max Vektor'**
+  String get loginPhoneTitle;
+
+  /// No description provided for @loginCodeTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Введите код'**
+  String get loginCodeTitle;
+
+  /// No description provided for @loginNameTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Как вас зовут?'**
+  String get loginNameTitle;
+
+  /// No description provided for @login2faTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пароль двухфакторной защиты'**
+  String get login2faTitle;
+
+  /// No description provided for @loginTokenTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Вход по токену'**
+  String get loginTokenTitle;
+
+  /// No description provided for @loginPhonePrompt.
+  ///
+  /// In ru, this message translates to:
+  /// **'Введите номер телефона — пришлём код подтверждения.'**
+  String get loginPhonePrompt;
+
+  /// No description provided for @loginCodePrompt.
+  ///
+  /// In ru, this message translates to:
+  /// **'Отправили код на {phone}. Он приходит в SMS или в официальное приложение MAX.'**
+  String loginCodePrompt(Object phone);
+
+  /// No description provided for @loginNamePrompt.
+  ///
+  /// In ru, this message translates to:
+  /// **'Этого номера ещё нет в MAX. Укажите имя — и аккаунт будет создан.'**
+  String get loginNamePrompt;
+
+  /// No description provided for @login2faPrompt.
+  ///
+  /// In ru, this message translates to:
+  /// **'На аккаунте включён пароль. Введите его, чтобы завершить вход.'**
+  String get login2faPrompt;
+
+  /// No description provided for @loginPhoneField.
+  ///
+  /// In ru, this message translates to:
+  /// **'Номер телефона'**
+  String get loginPhoneField;
+
+  /// No description provided for @loginGetCode.
+  ///
+  /// In ru, this message translates to:
+  /// **'Получить код'**
+  String get loginGetCode;
+
+  /// No description provided for @loginConfirm.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подтвердить'**
+  String get loginConfirm;
+
+  /// No description provided for @loginResendIn.
+  ///
+  /// In ru, this message translates to:
+  /// **'Запросить код заново через {seconds} с'**
+  String loginResendIn(Object seconds);
+
+  /// No description provided for @loginResend.
+  ///
+  /// In ru, this message translates to:
+  /// **'Запросить код заново'**
+  String get loginResend;
+
+  /// No description provided for @loginAttemptsLeft.
+  ///
+  /// In ru, this message translates to:
+  /// **'Осталось запросов кода: {count}'**
+  String loginAttemptsLeft(Object count);
+
+  /// No description provided for @loginFirstName.
+  ///
+  /// In ru, this message translates to:
+  /// **'Имя'**
+  String get loginFirstName;
+
+  /// No description provided for @loginLastNameOptional.
+  ///
+  /// In ru, this message translates to:
+  /// **'Фамилия (необязательно)'**
+  String get loginLastNameOptional;
+
+  /// No description provided for @loginNameHint.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не короче двух символов, только буквы — без цифр, эмодзи и знаков препинания.'**
+  String get loginNameHint;
+
+  /// No description provided for @loginCreateAccount.
+  ///
+  /// In ru, this message translates to:
+  /// **'Создать аккаунт'**
+  String get loginCreateAccount;
+
+  /// No description provided for @loginNameTooShort.
+  ///
+  /// In ru, this message translates to:
+  /// **'Имя должно быть не короче двух букв'**
+  String get loginNameTooShort;
+
+  /// No description provided for @loginPassword.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пароль'**
+  String get loginPassword;
+
+  /// No description provided for @loginHide.
+  ///
+  /// In ru, this message translates to:
+  /// **'Скрыть'**
+  String get loginHide;
+
+  /// No description provided for @loginShow.
+  ///
+  /// In ru, this message translates to:
+  /// **'Показать'**
+  String get loginShow;
+
+  /// No description provided for @loginSignIn.
+  ///
+  /// In ru, this message translates to:
+  /// **'Войти'**
+  String get loginSignIn;
+
+  /// No description provided for @loginTokenHint.
+  ///
+  /// In ru, this message translates to:
+  /// **'Вставьте токен сюда…'**
+  String get loginTokenHint;
+
+  /// No description provided for @loginTokenButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Войти по токену'**
+  String get loginTokenButton;
+
+  /// No description provided for @loginChangeNumber.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изменить номер'**
+  String get loginChangeNumber;
+
+  /// No description provided for @loginNameVisibleHint.
+  ///
+  /// In ru, this message translates to:
+  /// **'Имя увидят собеседники в MAX. Его можно изменить позже в настройках профиля.'**
+  String get loginNameVisibleHint;
+
+  /// No description provided for @loginByPhone.
+  ///
+  /// In ru, this message translates to:
+  /// **'Войти по номеру телефона'**
+  String get loginByPhone;
+
+  /// No description provided for @loginHaveToken.
+  ///
+  /// In ru, this message translates to:
+  /// **'У меня есть auth-token'**
+  String get loginHaveToken;
+
+  /// No description provided for @loginSearchCountry.
+  ///
+  /// In ru, this message translates to:
+  /// **'Поиск страны или кода'**
+  String get loginSearchCountry;
+
+  /// No description provided for @commonSearch.
+  ///
+  /// In ru, this message translates to:
+  /// **'Поиск'**
+  String get commonSearch;
+
+  /// No description provided for @commonContinue.
+  ///
+  /// In ru, this message translates to:
+  /// **'Продолжить'**
+  String get commonContinue;
+
+  /// No description provided for @commonFind.
+  ///
+  /// In ru, this message translates to:
+  /// **'Найти'**
+  String get commonFind;
+
+  /// No description provided for @commonNothingFound.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ничего не найдено'**
+  String get commonNothingFound;
+
+  /// No description provided for @commonError.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ошибка: {error}'**
+  String commonError(Object error);
+
+  /// No description provided for @chatsArchive.
+  ///
+  /// In ru, this message translates to:
+  /// **'Архив'**
+  String get chatsArchive;
+
+  /// No description provided for @chatsArchiveEmpty.
+  ///
+  /// In ru, this message translates to:
+  /// **'Архив пока пуст'**
+  String get chatsArchiveEmpty;
+
+  /// No description provided for @chatsNewChat.
+  ///
+  /// In ru, this message translates to:
+  /// **'Новый чат'**
+  String get chatsNewChat;
+
+  /// No description provided for @chatsEmpty.
+  ///
+  /// In ru, this message translates to:
+  /// **'Чатов пока нет'**
+  String get chatsEmpty;
+
+  /// No description provided for @chatsEmptyHint.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нажмите на кнопку справа внизу,\nчтобы начать новый чат.'**
+  String get chatsEmptyHint;
+
+  /// No description provided for @searchTryAnother.
+  ///
+  /// In ru, this message translates to:
+  /// **'Попробуйте другой запрос.'**
+  String get searchTryAnother;
+
+  /// No description provided for @chatPin.
+  ///
+  /// In ru, this message translates to:
+  /// **'Закрепить'**
+  String get chatPin;
+
+  /// No description provided for @chatUnpin.
+  ///
+  /// In ru, this message translates to:
+  /// **'Открепить'**
+  String get chatUnpin;
+
+  /// No description provided for @chatEnableNotif.
+  ///
+  /// In ru, this message translates to:
+  /// **'Включить уведомления'**
+  String get chatEnableNotif;
+
+  /// No description provided for @chatDisableNotif.
+  ///
+  /// In ru, this message translates to:
+  /// **'Отключить уведомления'**
+  String get chatDisableNotif;
+
+  /// No description provided for @chatArchive.
+  ///
+  /// In ru, this message translates to:
+  /// **'Архивировать'**
+  String get chatArchive;
+
+  /// No description provided for @chatUnarchive.
+  ///
+  /// In ru, this message translates to:
+  /// **'Вернуть из архива'**
+  String get chatUnarchive;
+
+  /// No description provided for @chatMarkRead.
+  ///
+  /// In ru, this message translates to:
+  /// **'Прочитано'**
+  String get chatMarkRead;
+
+  /// No description provided for @dateYesterday.
+  ///
+  /// In ru, this message translates to:
+  /// **'Вчера'**
+  String get dateYesterday;
+
+  /// No description provided for @contactsHideSearch.
+  ///
+  /// In ru, this message translates to:
+  /// **'Скрыть поиск'**
+  String get contactsHideSearch;
+
+  /// No description provided for @contactsImport.
+  ///
+  /// In ru, this message translates to:
+  /// **'Импорт из адресной книги'**
+  String get contactsImport;
+
+  /// No description provided for @contactsAddByNumber.
+  ///
+  /// In ru, this message translates to:
+  /// **'Добавить по номеру'**
+  String get contactsAddByNumber;
+
+  /// No description provided for @contactsDeleteTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить контакт?'**
+  String get contactsDeleteTitle;
+
+  /// No description provided for @contactPlaceholder.
+  ///
+  /// In ru, this message translates to:
+  /// **'Контакт {id}'**
+  String contactPlaceholder(Object id);
+
+  /// No description provided for @contactDeleted.
+  ///
+  /// In ru, this message translates to:
+  /// **'Контакт удалён'**
+  String get contactDeleted;
+
+  /// No description provided for @contactsImportTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Импорт контактов'**
+  String get contactsImportTitle;
+
+  /// No description provided for @contactsImportWarn.
+  ///
+  /// In ru, this message translates to:
+  /// **'MAX считает массовую проверку номеров подозрительной и может заблокировать номер. Чтобы снизить риск, проверю не больше {cap} номеров, по одному раз в ~1.5 секунды. Это займёт около минуты. Продолжить?'**
+  String contactsImportWarn(Object cap);
+
+  /// No description provided for @contactsReadingBook.
+  ///
+  /// In ru, this message translates to:
+  /// **'Чтение адресной книги…'**
+  String get contactsReadingBook;
+
+  /// No description provided for @contactsChecking.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверка: {done} из {total}'**
+  String contactsChecking(Object done, Object total);
+
+  /// No description provided for @contactsFoundInMax.
+  ///
+  /// In ru, this message translates to:
+  /// **'Найдено в MAX: {found} из {checked}'**
+  String contactsFoundInMax(Object found, Object checked);
+
+  /// No description provided for @contactsFindByNumber.
+  ///
+  /// In ru, this message translates to:
+  /// **'Найти по номеру'**
+  String get contactsFindByNumber;
+
+  /// No description provided for @contactsPhone.
+  ///
+  /// In ru, this message translates to:
+  /// **'Телефон'**
+  String get contactsPhone;
+
+  /// No description provided for @contactsFound.
+  ///
+  /// In ru, this message translates to:
+  /// **'Найден: {name}'**
+  String contactsFound(Object name);
+
+  /// No description provided for @contactsEmpty.
+  ///
+  /// In ru, this message translates to:
+  /// **'Контактов нет. Импортируйте адресную книгу или добавьте номер вручную.'**
+  String get contactsEmpty;
+
+  /// No description provided for @callsCreate.
+  ///
+  /// In ru, this message translates to:
+  /// **'Создать звонок'**
+  String get callsCreate;
+
+  /// No description provided for @callsEmpty.
+  ///
+  /// In ru, this message translates to:
+  /// **'История звонков пуста'**
+  String get callsEmpty;
+
+  /// No description provided for @callsEmptyHint.
+  ///
+  /// In ru, this message translates to:
+  /// **'Голосовые и видеозвонки появятся в одном из следующих обновлений.'**
+  String get callsEmptyHint;
+
+  /// No description provided for @callMissed.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пропущенный'**
+  String get callMissed;
+
+  /// No description provided for @callIncoming.
+  ///
+  /// In ru, this message translates to:
+  /// **'Входящий'**
+  String get callIncoming;
+
+  /// No description provided for @callOutgoing.
+  ///
+  /// In ru, this message translates to:
+  /// **'Исходящий'**
+  String get callOutgoing;
+
+  /// No description provided for @profileTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Профиль'**
+  String get profileTitle;
+
+  /// No description provided for @profileSaved.
+  ///
+  /// In ru, this message translates to:
+  /// **'Профиль сохранён'**
+  String get profileSaved;
+
+  /// No description provided for @profileLastName.
+  ///
+  /// In ru, this message translates to:
+  /// **'Фамилия'**
+  String get profileLastName;
+
+  /// No description provided for @profileAbout.
+  ///
+  /// In ru, this message translates to:
+  /// **'О себе'**
+  String get profileAbout;
+
+  /// No description provided for @profileDelete.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить профиль'**
+  String get profileDelete;
+
+  /// No description provided for @profileLogout.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выйти из профиля'**
+  String get profileLogout;
+
+  /// No description provided for @profileDeleteInactive.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить профиль, если он неактивен'**
+  String get profileDeleteInactive;
+
+  /// No description provided for @profileTtlUpdated.
+  ///
+  /// In ru, this message translates to:
+  /// **'Срок обновлён'**
+  String get profileTtlUpdated;
+
+  /// No description provided for @profileLogoutTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выйти из профиля?'**
+  String get profileLogoutTitle;
+
+  /// No description provided for @profileLogoutBody.
+  ///
+  /// In ru, this message translates to:
+  /// **'Аккаунт исчезнет из переключателя. Его локальные данные будут удалены с устройства. Другие аккаунты не затрагиваются.'**
+  String get profileLogoutBody;
+
+  /// No description provided for @commonRefresh.
+  ///
+  /// In ru, this message translates to:
+  /// **'Обновить'**
+  String get commonRefresh;
+
+  /// No description provided for @commonClear.
+  ///
+  /// In ru, this message translates to:
+  /// **'Очистить'**
+  String get commonClear;
+
+  /// No description provided for @chatMember.
+  ///
+  /// In ru, this message translates to:
+  /// **'Участник {id}'**
+  String chatMember(Object id);
+
+  /// No description provided for @chatLastSeenRecently.
+  ///
+  /// In ru, this message translates to:
+  /// **'был(а) недавно'**
+  String get chatLastSeenRecently;
+
+  /// No description provided for @chatMembersCount.
+  ///
+  /// In ru, this message translates to:
+  /// **'{count} участн.'**
+  String chatMembersCount(Object count);
+
+  /// No description provided for @chatTitlePlaceholder.
+  ///
+  /// In ru, this message translates to:
+  /// **'Чат {id}'**
+  String chatTitlePlaceholder(Object id);
+
+  /// No description provided for @chatEmpty.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сообщений пока нет'**
+  String get chatEmpty;
+
+  /// No description provided for @chatVideoCall.
+  ///
+  /// In ru, this message translates to:
+  /// **'Видеозвонок'**
+  String get chatVideoCall;
+
+  /// No description provided for @chatCall.
+  ///
+  /// In ru, this message translates to:
+  /// **'Звонок'**
+  String get chatCall;
+
+  /// No description provided for @chatMedia.
+  ///
+  /// In ru, this message translates to:
+  /// **'Медиа чата'**
+  String get chatMedia;
+
+  /// No description provided for @chatNewMessages.
+  ///
+  /// In ru, this message translates to:
+  /// **'Новые сообщения'**
+  String get chatNewMessages;
+
+  /// No description provided for @chatReplyTo.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ответ на:'**
+  String get chatReplyTo;
+
+  /// No description provided for @chatReplyCancel.
+  ///
+  /// In ru, this message translates to:
+  /// **'Отменить ответ'**
+  String get chatReplyCancel;
+
+  /// No description provided for @forwardUnknownUser.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пользователь'**
+  String get forwardUnknownUser;
+
+  /// No description provided for @msgReply.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ответить'**
+  String get msgReply;
+
+  /// No description provided for @msgCopy.
+  ///
+  /// In ru, this message translates to:
+  /// **'Копировать'**
+  String get msgCopy;
+
+  /// No description provided for @msgForward.
+  ///
+  /// In ru, this message translates to:
+  /// **'Переслать'**
+  String get msgForward;
+
+  /// No description provided for @msgEdit.
+  ///
+  /// In ru, this message translates to:
+  /// **'Редактировать'**
+  String get msgEdit;
+
+  /// No description provided for @msgEditHint.
+  ///
+  /// In ru, this message translates to:
+  /// **'Новый текст'**
+  String get msgEditHint;
+
+  /// No description provided for @msgCopied.
+  ///
+  /// In ru, this message translates to:
+  /// **'Скопировано'**
+  String get msgCopied;
+
+  /// No description provided for @msgReplyNotConfirmed.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нельзя ответить: сообщение ещё не подтверждено сервером'**
+  String get msgReplyNotConfirmed;
+
+  /// No description provided for @msgForwardTextOnly.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пока пересылаются только текстовые сообщения'**
+  String get msgForwardTextOnly;
+
+  /// No description provided for @sendAttachFailed.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось отправить вложение'**
+  String get sendAttachFailed;
+
+  /// No description provided for @diagHint.
+  ///
+  /// In ru, this message translates to:
+  /// **'Логи соединения и протокола ({count} строк). Токены и коды не записываются. Скопируйте и пришлите для разбора проблемы.'**
+  String diagHint(Object count);
+
+  /// No description provided for @diagEmpty.
+  ///
+  /// In ru, this message translates to:
+  /// **'Логов пока нет.'**
+  String get diagEmpty;
+
+  /// No description provided for @diagCopyAll.
+  ///
+  /// In ru, this message translates to:
+  /// **'Скопировать всё'**
+  String get diagCopyAll;
+
+  /// No description provided for @diagCopied.
+  ///
+  /// In ru, this message translates to:
+  /// **'Логи скопированы'**
+  String get diagCopied;
+
+  /// No description provided for @qrConfirming.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подтверждаем вход…'**
+  String get qrConfirming;
+
+  /// No description provided for @qrDone.
+  ///
+  /// In ru, this message translates to:
+  /// **'Готово. Вход на другом устройстве подтверждён.'**
+  String get qrDone;
+
+  /// No description provided for @qrHint.
+  ///
+  /// In ru, this message translates to:
+  /// **'Наведите камеру на QR-код со страницы входа MAX на другом устройстве (например web.max.ru). Ваш аккаунт подтвердит вход.'**
+  String get qrHint;
+
+  /// No description provided for @videoError.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось воспроизвести видео'**
+  String get videoError;
+
+  /// No description provided for @videoTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Видео'**
+  String get videoTitle;
+
+  /// No description provided for @connConnecting.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подключение…'**
+  String get connConnecting;
+
+  /// No description provided for @connReconnecting.
+  ///
+  /// In ru, this message translates to:
+  /// **'Переподключение…'**
+  String get connReconnecting;
+
+  /// No description provided for @connNoConnection.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет соединения'**
+  String get connNoConnection;
+
+  /// No description provided for @inputAttach.
+  ///
+  /// In ru, this message translates to:
+  /// **'Прикрепить'**
+  String get inputAttach;
+
+  /// No description provided for @inputMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сообщение'**
+  String get inputMessage;
+
+  /// No description provided for @attachPhotoGallery.
+  ///
+  /// In ru, this message translates to:
+  /// **'Фото из галереи'**
+  String get attachPhotoGallery;
+
+  /// No description provided for @attachVideoGallery.
+  ///
+  /// In ru, this message translates to:
+  /// **'Видео из галереи'**
+  String get attachVideoGallery;
+
+  /// No description provided for @attachTakePhoto.
+  ///
+  /// In ru, this message translates to:
+  /// **'Снять фото'**
+  String get attachTakePhoto;
+
+  /// No description provided for @attachTakeVideo.
+  ///
+  /// In ru, this message translates to:
+  /// **'Снять видео'**
+  String get attachTakeVideo;
+
+  /// No description provided for @attachFile.
+  ///
+  /// In ru, this message translates to:
+  /// **'Файл'**
+  String get attachFile;
+
+  /// No description provided for @devLoadFailed.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось загрузить сессии:\n{error}'**
+  String devLoadFailed(Object error);
+
+  /// No description provided for @fwdPickTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Переслать в'**
+  String get fwdPickTitle;
+
+  /// No description provided for @fwdSearchChat.
+  ///
+  /// In ru, this message translates to:
+  /// **'Поиск чата'**
+  String get fwdSearchChat;
+
+  /// No description provided for @fwdForwardedTo.
+  ///
+  /// In ru, this message translates to:
+  /// **'Переслано в {target}'**
+  String fwdForwardedTo(Object target);
+
+  /// No description provided for @galleryEmpty.
+  ///
+  /// In ru, this message translates to:
+  /// **'Медиа пока нет'**
+  String get galleryEmpty;
+
+  /// No description provided for @profChat.
+  ///
+  /// In ru, this message translates to:
+  /// **'Чат'**
+  String get profChat;
+
+  /// No description provided for @profMediaFilesLinks.
+  ///
+  /// In ru, this message translates to:
+  /// **'Медиа, файлы и ссылки'**
+  String get profMediaFilesLinks;
+
+  /// No description provided for @profNotifications.
+  ///
+  /// In ru, this message translates to:
+  /// **'Уведомления'**
+  String get profNotifications;
+
+  /// No description provided for @profEnabled.
+  ///
+  /// In ru, this message translates to:
+  /// **'Включены'**
+  String get profEnabled;
+
+  /// No description provided for @profPinChat.
+  ///
+  /// In ru, this message translates to:
+  /// **'Закрепить чат'**
+  String get profPinChat;
+
+  /// No description provided for @profClearHistory.
+  ///
+  /// In ru, this message translates to:
+  /// **'Очистить историю'**
+  String get profClearHistory;
+
+  /// No description provided for @profClearHistoryTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Очистить историю?'**
+  String get profClearHistoryTitle;
+
+  /// No description provided for @profHistoryCleared.
+  ///
+  /// In ru, this message translates to:
+  /// **'История очищена локально'**
+  String get profHistoryCleared;
+
+  /// No description provided for @accAddAccount.
+  ///
+  /// In ru, this message translates to:
+  /// **'Добавить аккаунт'**
+  String get accAddAccount;
+
+  /// No description provided for @accLogoutTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выйти из «{name}»?'**
+  String accLogoutTitle(Object name);
+
+  /// No description provided for @transcribe.
+  ///
+  /// In ru, this message translates to:
+  /// **'Расшифровать'**
+  String get transcribe;
+
+  /// No description provided for @transcribeEmpty.
+  ///
+  /// In ru, this message translates to:
+  /// **'Расшифровка пуста'**
+  String get transcribeEmpty;
+
+  /// No description provided for @audioUnavailable.
+  ///
+  /// In ru, this message translates to:
+  /// **'Аудио недоступно'**
+  String get audioUnavailable;
+
+  /// No description provided for @audioPlayFailed.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось воспроизвести аудио'**
+  String get audioPlayFailed;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {
@@ -713,8 +1609,17 @@ class _LDelegate extends LocalizationsDelegate<L> {
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'ru'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>[
+    'de',
+    'en',
+    'es',
+    'fr',
+    'it',
+    'pt',
+    'ru',
+    'tr',
+    'uk',
+  ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_LDelegate old) => false;
@@ -723,10 +1628,24 @@ class _LDelegate extends LocalizationsDelegate<L> {
 L lookupL(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'de':
+      return LDe();
     case 'en':
       return LEn();
+    case 'es':
+      return LEs();
+    case 'fr':
+      return LFr();
+    case 'it':
+      return LIt();
+    case 'pt':
+      return LPt();
     case 'ru':
       return LRu();
+    case 'tr':
+      return LTr();
+    case 'uk':
+      return LUk();
   }
 
   throw FlutterError(

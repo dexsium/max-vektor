@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -41,14 +42,14 @@ class _QrLoginScannerScreenState extends ConsumerState<QrLoginScannerScreen> {
 
     setState(() {
       _busy = true;
-      _status = 'Подтверждаем вход…';
+      _status = L.of(context).qrConfirming;
     });
 
     try {
       final client = ref.read(maxClientProvider);
       final resp = await client.approveQrLogin(raw);
       if (!mounted) return;
-      setState(() => _status = 'Готово. Вход на другом устройстве подтверждён.');
+      setState(() => _status = L.of(context).qrDone);
       await Future<void>.delayed(const Duration(milliseconds: 900));
       if (mounted) Navigator.of(context).pop(true);
       // resp намеренно не разбираем: серверный ответ уже в логах
@@ -74,7 +75,7 @@ class _QrLoginScannerScreenState extends ConsumerState<QrLoginScannerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Вход по QR-коду')),
+      appBar: AppBar(title: Text(L.of(context).settingsQrLogin)),
       body: Column(
         children: [
           Expanded(
@@ -102,10 +103,7 @@ class _QrLoginScannerScreenState extends ConsumerState<QrLoginScannerScreen> {
           Padding(
             padding: const EdgeInsets.all(20),
             child: Text(
-              _status ??
-                  'Наведите камеру на QR-код со страницы входа MAX на другом '
-                      'устройстве (например web.max.ru). Ваш аккаунт подтвердит '
-                      'вход.',
+              _status ?? L.of(context).qrHint,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
