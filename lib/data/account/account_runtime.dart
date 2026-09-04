@@ -35,6 +35,9 @@ class AccountRuntime {
       client: client,
       storage: storage,
       logger: _log,
+      // Слот сменил владельца (вошли другим номером) → чистим БД аккаунта,
+      // чтобы чаты прежнего владельца не подмешивались.
+      onForeignUser: () async => (await database()).clearConversationData(),
     );
   }
 

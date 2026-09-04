@@ -588,6 +588,20 @@ class AppDatabase {
     await _db.delete('outbox', where: 'local_id = ?', whereArgs: [localId]);
   }
 
+  /// Полностью очистить локальные данные переписки этого аккаунта: чаты,
+  /// сообщения, вложения, очередь отправки и контакты. Нужно, когда в этот
+  /// слот входит ДРУГОЙ пользователь (например после «сессия истекла» и входа
+  /// другим номером) — иначе чаты прежнего владельца слота подмешиваются.
+  Future<void> clearConversationData() async {
+    await _db.transaction((txn) async {
+      await txn.delete('messages');
+      await txn.delete('attachments');
+      await txn.delete('chats');
+      await txn.delete('outbox');
+      await txn.delete('contacts');
+    });
+  }
+
   Future<void> incOutboxAttempts(String localId) async {
     await _db.rawUpdate(
       'UPDATE outbox SET attempts = attempts + 1 WHERE local_id = ?',

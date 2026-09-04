@@ -1,16 +1,31 @@
 import 'package:flutter/material.dart';
 
-/// Знак Max Vektor — буква «V».
+/// Знак Vektor — глянцевая буква «V» (ассет из assets/brand/v_logo.png).
 ///
-/// Та же геометрия, что у иконки приложения (`tool_gen_icon.py`), поэтому
-/// экран входа и иконка на домашнем экране выглядят как одно целое.
-/// Собственный знак, без элементов брендинга официального MAX.
+/// Тот же логотип, что в иконке приложения. Если ассет по какой-то причине не
+/// загрузился, рисуем векторный запасной знак того же силуэта.
 class VektorMark extends StatelessWidget {
   const VektorMark({super.key, this.size = 72});
 
   final double size;
 
-  /// Полигон буквы «V» в долях стороны квадрата.
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/brand/v_logo.png',
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => _FallbackMark(size: size),
+    );
+  }
+}
+
+/// Векторный запасной знак «V» (на случай отсутствия ассета).
+class _FallbackMark extends StatelessWidget {
+  const _FallbackMark({required this.size});
+  final double size;
+
   static const List<Offset> _glyph = [
     Offset(0.185, 0.255),
     Offset(0.350, 0.255),
@@ -22,24 +37,9 @@ class VektorMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(size * 0.2237),
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF10141C), Color(0xFF1A2130)],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF2563EB).withValues(alpha: 0.28),
-            blurRadius: size * 0.35,
-            offset: Offset(0, size * 0.1),
-          ),
-        ],
-      ),
       child: CustomPaint(painter: _GlyphPainter()),
     );
   }
@@ -49,8 +49,8 @@ class _GlyphPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final path = Path();
-    for (var i = 0; i < VektorMark._glyph.length; i++) {
-      final p = VektorMark._glyph[i];
+    for (var i = 0; i < _FallbackMark._glyph.length; i++) {
+      final p = _FallbackMark._glyph[i];
       final point = Offset(p.dx * size.width, p.dy * size.height);
       if (i == 0) {
         path.moveTo(point.dx, point.dy);

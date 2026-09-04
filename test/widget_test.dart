@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:max_vektor/core/constants.dart';
 import 'package:max_vektor/data/account/account.dart';
 import 'package:max_vektor/l10n/app_localizations.dart';
 import 'package:max_vektor/state/providers.dart';
@@ -39,7 +38,7 @@ void main() {
   testWidgets('экран входа: первый шаг — ввод номера', (tester) async {
     await tester.pumpWidget(_app(const LoginScreen()));
 
-    expect(find.text(AppMeta.name), findsOneWidget);
+    expect(find.text('Vektor'), findsOneWidget);
     expect(find.byType(VektorMark), findsOneWidget);
     expect(find.text('Номер телефона'), findsOneWidget);
     expect(find.text('Получить код'), findsOneWidget);
@@ -48,6 +47,9 @@ void main() {
   testWidgets('экран входа: есть переход на вход по токену', (tester) async {
     await tester.pumpWidget(_app(const LoginScreen()));
 
+    // Ссылка внизу прокручиваемого экрана — доводим до видимой области.
+    await tester.ensureVisible(find.text('У меня есть auth-token'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('У меня есть auth-token'));
     await tester.pumpAndSettle();
 

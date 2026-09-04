@@ -9,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../state/session_controller.dart';
+import '../theme/app_theme.dart';
 import '../widgets/code_input.dart';
 import '../widgets/vektor_mark.dart';
 import 'diagnostics_screen.dart';
@@ -81,30 +82,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // в списке уже есть другой (залогиненный) аккаунт.
     final canCancel = ref.watch(accountsProvider).length > 1;
 
-    return Scaffold(
+    // Экран входа всегда тёмный (брендированный), независимо от темы системы —
+    // поэтому оборачиваем в тёмную тему, чтобы поля/пилюли были тёмными.
+    return Theme(
+      data: AppTheme.dark(),
+      child: Scaffold(
+      backgroundColor: const Color(0xFF080B12),
       // Тап по пустому месту убирает клавиатуру.
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => FocusScope.of(context).unfocus(),
-        child: SafeArea(
+        child: Stack(
+          children: [
+            const Positioned.fill(child: _LoginBackground()),
+            SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Верхний ряд: назад (если это добавление аккаунта) слева и
-              // «Диагностика» справа — лог нужен и на экране входа (после
-              // вылета настройки недоступны, а причину вылета видно в логе).
+              // шестерёнка справа → «Диагностика» (лог нужен и на экране входа:
+              // после вылета настройки недоступны, а причину видно в логе).
               Row(
                 children: [
                   if (canCancel)
                     IconButton(
                       tooltip: L.of(context).loginBack,
-                      icon: const Icon(Icons.arrow_back),
+                      icon: const Icon(Icons.arrow_back, color: Colors.white70),
                       onPressed: _busy ? null : () => ctrl.cancelAddAccount(),
                     ),
                   const Spacer(),
                   IconButton(
                     tooltip: L.of(context).settingsDiagnostics,
-                    icon: const Icon(Icons.bug_report_outlined),
+                    icon: const Icon(Icons.settings_outlined,
+                        color: Colors.white70),
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const DiagnosticsScreen(),
@@ -146,8 +156,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ],
           ),
+            ),
+          ],
         ),
       ),
+    ),
     );
   }
 
@@ -161,25 +174,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // ─────────────────────────── шапка ───────────────────────────
 
   Widget _header(_Step step) {
-    final theme = Theme.of(context);
+    final isPhone = step == _Step.phone;
+    final logoSize = isPhone ? 200.0 : 96.0;
     return Column(
       children: [
-        const VektorMark(size: 76),
-        const SizedBox(height: 18),
-        Text(
-          _title(step),
-          textAlign: TextAlign.center,
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
+        // У PNG-логотипа собственное свечение — показываем как есть.
+        VektorMark(size: logoSize),
+        SizedBox(height: isPhone ? 4 : 12),
+        if (isPhone)
+          const _VektorWordmark()
+        else
+          Text(
+            _title(step),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Text(
           _subtitle(step),
           textAlign: TextAlign.center,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+          style: const TextStyle(fontSize: 15, color: Colors.white70),
         ),
       ],
     );
@@ -618,23 +636,106 @@ class _PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 52,
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: busy
+            ? null
+            : [
+                BoxShadow(
+                  color: const Color(0xFF2E7DF0).withValues(alpha: 0.55),
+                  blurRadius: 28,
+                  spreadRadius: -2,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+      ),
       child: FilledButton(
         onPressed: busy ? null : onPressed,
         style: FilledButton.styleFrom(
+          backgroundColor: const Color(0xFF2E7DF0),
+          foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
           ),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
         ),
         child: busy
             ? const SizedBox(
                 width: 22,
                 height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2.4),
+                child: CircularProgressIndicator(
+                    strokeWidth: 2.4, color: Colors.white),
               )
             : Text(label),
+      ),
+    );
+  }
+}
+
+/// Надпись «Vektor» с сине-белым градиентом (как на брендированном входе).
+class _VektorWordmark extends StatelessWidget {
+  const _VektorWordmark();
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      shaderCallback: (rect) => const LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [Color(0xFF8FC0FF), Color(0xFFFFFFFF), Color(0xFF3E86F5)],
+        stops: [0.0, 0.45, 1.0],
+      ).createShader(rect),
+      child: const Text(
+        'Vektor',
+        style: TextStyle(
+          fontSize: 40,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.5,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+}
+
+/// Тёмный фон экрана входа с синим свечением снизу (как «горизонт планеты»).
+class _LoginBackground extends StatelessWidget {
+  const _LoginBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF080B12), Color(0xFF0A1020), Color(0xFF070A11)],
+          stops: [0.0, 0.55, 1.0],
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Нижнее-левое свечение — дуга «горизонта».
+          Positioned(
+            left: -160,
+            bottom: -220,
+            child: Container(
+              width: 520,
+              height: 520,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF2E7DF0).withValues(alpha: 0.30),
+                    const Color(0xFF2E7DF0).withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

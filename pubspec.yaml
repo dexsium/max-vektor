@@ -1,7 +1,7 @@
 name: max_vektor
 description: "Max Vektor — неофициальный клиент мессенджера MAX (iOS/Android)"
 publish_to: 'none'
-version: 0.15.2+1
+version: 0.16.0+1
 
 environment:
   sdk: ^3.7.2
@@ -75,3 +75,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+  assets:
+    - assets/brand/

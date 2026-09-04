@@ -23,12 +23,18 @@ class AuthRepository {
   AuthRepository({
     required this.client,
     required this.storage,
+    this.onForeignUser,
     Logger? logger,
   }) : _log = logger ?? Logger();
 
   final MaxClient client;
   final SecureStorage storage;
   final Logger _log;
+
+  /// Вызывается, когда в этот слот вошёл ДРУГОЙ пользователь (server userId
+  /// не совпал с сохранённым). Реализация чистит локальную БД аккаунта, чтобы
+  /// не смешивать чаты прежнего владельца слота с новым.
+  final Future<void> Function()? onForeignUser;
 
   /// Каким устройством представляться при входе по номеру.
   ///
@@ -92,6 +98,9 @@ class AuthRepository {
     try {
       if (!client.isConnected) await client.connect(deviceType: deviceType);
       await client.login(saved);
+      // Сервер ротирует токен в ответе LOGIN — перезаписываем сохранённый,
+      // иначе следующий реконнект пойдёт протухшим токеном → FAIL_LOGIN_TOKEN.
+      await _persistRotatedToken();
       _log.i('${MvTag.auth} сессия восстановлена (deviceType=$deviceType)');
       await _captureProfile();
       return true;
@@ -117,7 +126,8 @@ class AuthRepository {
     }
     await client.connect(deviceType: 'WEB');
     await client.login(token);
-    await storage.writeToken(token);
+    // Сохраняем токен из ответа LOGIN (ротированный), а не исходный.
+    await storage.writeToken(client.token ?? token);
     await storage.writeTokenKind('web');
     await _captureProfile(
       onError: 'профиль не загрузился после входа по токену',
@@ -280,7 +290,22 @@ class AuthRepository {
     await storage.writeToken(token);
     await storage.writeTokenKind(_authTokenKind);
     await client.login(token);
+    // LOGIN мог вернуть новый (ротированный) токен — сохраняем его.
+    await _persistRotatedToken();
     await _captureProfile();
+  }
+
+  /// Если сервер вернул в ответе LOGIN новый токен (client.token отличается от
+  /// сохранённого), перезаписываем сохранённый — иначе следующий реконнект
+  /// пойдёт протухшим токеном и получит FAIL_LOGIN_TOKEN («сессия истекла»).
+  Future<void> _persistRotatedToken() async {
+    final t = client.token;
+    if (t == null || t.isEmpty) return;
+    final saved = await storage.readToken();
+    if (t != saved) {
+      await storage.writeToken(t);
+      _log.i('${MvTag.auth} сохранён ротированный токен ${mvRedact(t)}');
+    }
   }
 
   /// Загрузить свой профиль и запомнить userId (в secure storage) и имя
@@ -290,7 +315,21 @@ class AuthRepository {
     try {
       final me = await client.currentProfile();
       final id = me['id'];
-      if (id is int) await storage.writeMyUserId(id);
+      if (id is int) {
+        // Владелец слота сменился? Тогда чистим локальные данные, иначе чаты
+        // прежнего номера подмешаются к новому (баг «из всех аккаунтов чаты»).
+        final prev = await storage.readMyUserId();
+        if (prev != null && prev != id) {
+          _log.i('${MvTag.auth} слот сменил владельца ($prev → $id) — '
+              'чищу локальные данные аккаунта');
+          try {
+            await onForeignUser?.call();
+          } catch (e) {
+            _log.w('${MvTag.auth} очистка локальных данных не удалась: $e');
+          }
+        }
+        await storage.writeMyUserId(id);
+      }
       final name = displayContactName(
         me.map((k, v) => MapEntry(k.toString(), v)),
       );

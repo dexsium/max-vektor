@@ -792,6 +792,18 @@ class MaxClient {
     _reconnect.rearm();
     final dec = f.decoded;
     if (dec is Map) {
+      // РОТАЦИЯ ТОКЕНА: ответ LOGIN содержит новый token — сервер ждёт, что мы
+      // сохраним ИМЕННО его и переподключимся им. Иначе при реконнекте старый
+      // токен протухает → FAIL_LOGIN_TOKEN («сессия истекла»). Именно это и
+      // ловилось в диагностике: 35 минут ок, потом фон → сокет умер → реконнект
+      // старым токеном → login.token. Отдаём новый токен наружу через _token
+      // (client.token), auth_repository перезаписывает им сохранённый.
+      final rotated = dec['token'];
+      if (rotated is String && rotated.isNotEmpty && rotated != token) {
+        _token = rotated;
+        _log.i('${MvTag.auth} LOGIN вернул новый токен — сохраняю для реконнекта '
+            '(${mvRedact(rotated)})');
+      }
       final chats = dec['chats'];
       if (chats is List && chats.isNotEmpty) {
         // Кэшируем снапшот: подписчик (список чатов) может быть построен
