@@ -3,6 +3,7 @@ import 'package:logger/logger.dart';
 import '../../core/logging.dart';
 import '../local/database.dart';
 import '../local/secure_storage.dart';
+import 'slot_owner.dart';
 import '../max/device_profile.dart';
 import '../max/max_client.dart';
 import '../repositories/auth_repository.dart';
@@ -34,25 +35,26 @@ class AccountRuntime {
       // тот же слот после «сессия истекла») — чистим БД ДО записи новых чатов,
       // иначе чаты прежнего владельца подмешиваются. Вызывается на каждом
       // LOGIN; при том же владельце ничего не делает.
-      onLoginUser: (userId) async {
-        if (userId == null) return;
-        // Сверяем с ВЛАДЕЛЬЦЕМ БД, а не с myUserId: в интерактивном входе
-        // (код/2FA/регистрация) _captureProfile записывает myUserId ещё ДО
-        // LOGIN, и сравнение с ним всегда давало «тот же владелец» — чаты
-        // прежнего номера оставались и клиент запрашивал чужие chatId
-        // (видно в диагностике: op 48 по чату старого аккаунта → chats: []).
-        // Неизвестный владелец (null: свежий слот, после wipe, первый запуск
-        // после обновления) тоже считаем сменой — данные неизвестного
-        // происхождения новому входу показывать нельзя; кэш пересинкается.
-        final owner = await storage.readDbOwnerId();
-        if (owner != userId) {
-          _log.i('${MvTag.auth} слот сменил владельца '
-              '(${owner ?? 'неизвестен'} → $userId) — чищу локальные данные');
-          await (await database()).clearConversationData();
-          await storage.writeDbOwnerId(userId);
-        }
-        await storage.writeMyUserId(userId);
-      },
+      // Сверяем с ВЛАДЕЛЬЦЕМ БД, а не с myUserId: в интерактивном входе
+      // (код/2FA/регистрация) _captureProfile записывает myUserId ещё ДО
+      // LOGIN, и сравнение с ним всегда давало «тот же владелец» — чаты
+      // прежнего номера оставались и клиент запрашивал чужие chatId
+      // (видно в диагностике: op 48 по чату старого аккаунта → chats: []).
+      // Правило вынесено в reconcileSlotOwner/slotOwnerChanged — чистая
+      // функция без сокета/Keychain/SQLite, проверена юнит-тестом
+      // (test/slot_owner_test.dart), здесь только подключены реальные
+      // storage/database.
+      onLoginUser: (userId) => reconcileSlotOwner(
+        userId: userId,
+        readOwner: storage.readDbOwnerId,
+        writeOwner: storage.writeDbOwnerId,
+        writeMyUserId: storage.writeMyUserId,
+        clearSlotData: () async => (await database()).clearConversationData(),
+        onOwnerChanged: (previous, next) => _log.i(
+          '${MvTag.auth} слот сменил владельца '
+          '(${previous ?? 'неизвестен'} → $next) — чищу локальные данные',
+        ),
+      ),
     );
     auth = AuthRepository(
       client: client,

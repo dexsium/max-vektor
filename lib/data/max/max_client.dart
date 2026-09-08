@@ -799,6 +799,14 @@ class MaxClient {
   /// кто подписался на [syncedChatsStream] уже после входа.
   List<dynamic>? get lastSyncedChats => _lastSyncedChats;
 
+  /// Персональный текст приглашения из серверного конфига
+  /// (config.server.invite-short, реже invite-long) — тот же текст и та же
+  /// персональная ссылка `max.ru/u/...`, что использует официальное
+  /// приложение в «Пригласить друга». Приходит в ответе LOGIN (op 19),
+  /// null до первого успешного входа.
+  String? get officialInviteText => _officialInviteText;
+  String? _officialInviteText;
+
   Future<Uint8List> login(String token) async {
     // Структура payload: token + userAgent + interactive + presenceSync=-1 +
     // вложенный exp{}. userAgent ОБЯЗАТЕЛЕН — без него сервер отвечает
@@ -875,6 +883,19 @@ class MaxClient {
           if (contact is Map) userId = _toInt(contact['id']);
         }
         await onLoginUser!(userId);
+      }
+      // Персональный текст/ссылка приглашения — тот же, что в официальном
+      // приложении (см. officialInviteText выше). config.server — плоская
+      // карта, ключи с дефисами оставлены как есть (сервер их так и шлёт).
+      final config = dec['config'];
+      if (config is Map) {
+        final server = config['server'];
+        if (server is Map) {
+          final invite = server['invite-short'] ?? server['invite-long'];
+          if (invite is String && invite.isNotEmpty) {
+            _officialInviteText = invite;
+          }
+        }
       }
       final chats = dec['chats'];
       if (chats is List && chats.isNotEmpty) {

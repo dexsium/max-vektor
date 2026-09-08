@@ -363,11 +363,17 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> {
 
   Future<void> _invite(AddressBookEntry e) async {
     final l = L.of(context);
+    // Тот же текст и персональная ссылка max.ru/u/..., что в «Пригласить
+    // друга» официального приложения (config.server.invite-short из ответа
+    // LOGIN, см. MaxClient.officialInviteText). Если конфиг ещё не пришёл
+    // (нет сети на момент открытия экрана) — свой шаблон как запасной.
+    final official = ref.read(maxClientProvider).officialInviteText;
+    final text = official ?? l.contactsInviteText(e.displayName);
     // Системный «Поделиться» (iOS UIActivityViewController / Android chooser):
     // пользователь сам выбирает SMS/мессенджер для приглашения.
     final box = context.findRenderObject() as RenderBox?;
     await Share.share(
-      l.contactsInviteText(e.displayName),
+      text,
       subject: L.of(context).contactsSectionInvite,
       // iPad требует origin для поповера — иначе краш.
       sharePositionOrigin:
