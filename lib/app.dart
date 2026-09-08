@@ -7,6 +7,7 @@ import 'l10n/app_localizations.dart';
 import 'state/appearance_controller.dart';
 import 'state/locale_controller.dart';
 import 'state/theme_controller.dart';
+import 'ui/app_lifecycle_gate.dart';
 import 'ui/screens/splash_screen.dart';
 import 'ui/theme/app_theme.dart';
 
@@ -41,10 +42,13 @@ class MaxVektorApp extends ConsumerWidget {
         return const Locale('ru');
       },
       // Масштаб текста: системный или выбранный на экране «Оформление».
+      // AppLifecycleGate — проверка соединения при возврате из фона (см. её
+      // документацию): без неё «зомби»-сокет мог висеть неопределённо долго
+      // после сворачивания/разворачивания приложения.
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context)
             .copyWith(textScaler: textScalerFor(textSize, context)),
-        child: child ?? const SizedBox.shrink(),
+        child: AppLifecycleGate(child: child ?? const SizedBox.shrink()),
       ),
       home: const SplashScreen(),
     );

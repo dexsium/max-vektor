@@ -913,6 +913,7 @@ class MaxClient {
 
   void _startKeepalive() {
     _keepalive?.cancel();
+    _missedPings = 0;
     // Первый PING сразу: сервер ждёт heartbeat вскоре после входа и рвёт
     // сокет, не дождавшись, — отсюда было «мигание» связи после входа.
     unawaited(_ping());
@@ -924,6 +925,17 @@ class MaxClient {
     _keepalive = null;
   }
 
+  /// Сколько PING подряд не дождались ответа. См. [_maxMissedPings].
+  int _missedPings = 0;
+
+  /// Порог «зомби»-соединения: сокет жив в памяти (onError/onDone не
+  /// срабатывали — TCP RST/FIN до Dart не дошёл, типично после смены сети
+  /// или возврата из фона), но сервер не отвечает. Таймаут ОДНОГО PING не
+  /// повод рвать — это может быть блип сети под нагрузкой; два подряд
+  /// (30 c без подтверждённой связи) — уже основание считать сокет мёртвым
+  /// и заставить onError/onDone-путь сработать явно, а не ждать их вечно.
+  static const int _maxMissedPings = 2;
+
   /// Heartbeat официальным опкодом PING (op 1). Именно его ждёт сервер,
   /// чтобы не рвать сокет (frk.java: heartbeat(15)). Тело пустое.
   Future<void> _ping() async {
@@ -934,9 +946,48 @@ class MaxClient {
         const <String, Object?>{},
         timeout: const Duration(seconds: 10),
       );
+      _missedPings = 0;
     } catch (e) {
-      // Реальный дроп/таймаут обработают onError/onDone → reconnect.
-      _log.d('${MvTag.socket} PING failed: $e');
+      _missedPings++;
+      _log.d('${MvTag.socket} PING failed ($_missedPings/$_maxMissedPings): $e');
+      if (_missedPings >= _maxMissedPings) {
+        // _request таймаутит МОЛЧА (бросает MaxTimeout вызывающему) — сам по
+        // себе не трогает сокет. Без этого порога «зомби»-соединение (сокет
+        // не закрыт, но сервер не отвечает) висело бы бесконечно: onError/
+        // onDone никогда не срабатывают, если TCP RST/FIN не дошёл до Dart.
+        _log.w('${MvTag.socket} $_maxMissedPings пингов подряд не прошли — '
+            'соединение похоже на «зомби», рву и переподключаюсь');
+        _missedPings = 0;
+        _handleDrop();
+      }
+    }
+  }
+
+  /// Явная проверка живости соединения — для возврата приложения из фона
+  /// (см. AppLifecycleGate). На iOS без background modes Dart-таймеры (в
+  /// т.ч. периодический keepalive) приостанавливаются, пока приложение
+  /// свёрнуто: 15-секундный PING не тикает в фоне произвольное время, и
+  /// TCP-соединение может незаметно умереть. В отличие от [_ping] внутри
+  /// обычного keepalive-таймера (которому нужно 2 провала подряд, чтобы не
+  /// дёргаться на единичный блип во время активного использования), здесь
+  /// ОДНОГО неудачного PING достаточно — контекст другой: мы ТОЧНО знаем,
+  /// что таймер только что «разморозился» после незнамо какой паузы, и
+  /// подключение имеет право быть протухшим.
+  Future<void> probeAfterResume() async {
+    if (_socket == null || _closed || _serverLoggedOut) return;
+    try {
+      await _request(
+        MaxOp.ping,
+        const <String, Object?>{},
+        timeout: const Duration(seconds: 8),
+      );
+      _missedPings = 0;
+      _log.d('${MvTag.socket} resume-проверка: соединение живо');
+    } catch (e) {
+      _log.w('${MvTag.socket} resume-проверка: PING не прошёл ($e) — '
+          'приложение было в фоне, keepalive не тикал; считаю соединение '
+          'мёртвым и переподключаюсь');
+      _handleDrop();
     }
   }
 
