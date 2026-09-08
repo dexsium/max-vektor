@@ -36,11 +36,20 @@ class AccountRuntime {
       // LOGIN; при том же владельце ничего не делает.
       onLoginUser: (userId) async {
         if (userId == null) return;
-        final prev = await storage.readMyUserId();
-        if (prev != null && prev != userId) {
-          _log.i('${MvTag.auth} слот сменил владельца ($prev → $userId) — '
-              'чищу локальные данные аккаунта');
+        // Сверяем с ВЛАДЕЛЬЦЕМ БД, а не с myUserId: в интерактивном входе
+        // (код/2FA/регистрация) _captureProfile записывает myUserId ещё ДО
+        // LOGIN, и сравнение с ним всегда давало «тот же владелец» — чаты
+        // прежнего номера оставались и клиент запрашивал чужие chatId
+        // (видно в диагностике: op 48 по чату старого аккаунта → chats: []).
+        // Неизвестный владелец (null: свежий слот, после wipe, первый запуск
+        // после обновления) тоже считаем сменой — данные неизвестного
+        // происхождения новому входу показывать нельзя; кэш пересинкается.
+        final owner = await storage.readDbOwnerId();
+        if (owner != userId) {
+          _log.i('${MvTag.auth} слот сменил владельца '
+              '(${owner ?? 'неизвестен'} → $userId) — чищу локальные данные');
           await (await database()).clearConversationData();
+          await storage.writeDbOwnerId(userId);
         }
         await storage.writeMyUserId(userId);
       },

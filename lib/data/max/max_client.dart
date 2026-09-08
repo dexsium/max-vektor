@@ -86,6 +86,10 @@ class MaxClient {
 
   String? _token;
 
+  /// Сервер прислал LOGOUT (op 20): токен мёртв, авто-реконнект запрещён до
+  /// следующего успешного входа. Сбрасывается в login()/markLoggedIn().
+  bool _serverLoggedOut = false;
+
   /// Часы с последнего успешного LOGIN — для anti-storm throttle
   /// (см. [ReconnectPolicy.authThrottle]). Не сбрасывается при дисконнекте:
   /// считаем именно время с последней АВТОРИЗАЦИИ, а не с разрыва.
@@ -770,6 +774,7 @@ class MaxClient {
   /// восстановление после перезапуска (см. [login]).
   void markLoggedIn(String token) {
     _token = token;
+    _serverLoggedOut = false;
     _sinceLogin
       ..reset()
       ..start();
@@ -838,6 +843,7 @@ class MaxClient {
       _log.i('${MvTag.auth} LOGIN: сессия уже онлайн — принимаю как успех');
     }
     _token = token;
+    _serverLoggedOut = false;
     _sinceLogin
       ..reset()
       ..start();
@@ -1402,6 +1408,19 @@ class MaxClient {
         'decoded=${_redact(frame.decoded)}',
       );
       onPushDebug?.call(frame);
+      // LOGOUT от сервера: сессия завершена принудительно. Реконнект этим
+      // токеном бессмыслен (и вреден — лишние LOGIN-попытки антифроду),
+      // поэтому глушим reconnect и разлогиниваем через onAuthInvalid.
+      if (frame.opcode == MaxOp.logout) {
+        _log.w('${MvTag.auth} сервер прислал LOGOUT (op 20) — сессия '
+            'завершена сервером, реконнект отменён');
+        _serverLoggedOut = true;
+        _token = null;
+        _reconnect.cancel();
+        _emitState(MaxConnectionState.disconnected);
+        _authInvalid?.call();
+        continue;
+      }
       final msg = _parsePush(frame);
       if (msg != null && !_pushCtrl.isClosed) {
         _pushCtrl.add(msg);
@@ -1430,7 +1449,7 @@ class MaxClient {
       _socket?.destroy();
     } catch (_) {}
     _socket = null;
-    if (_closed) {
+    if (_closed || _serverLoggedOut) {
       _emitState(MaxConnectionState.disconnected);
       return;
     }

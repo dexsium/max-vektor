@@ -44,6 +44,12 @@ class MaxOp {
   static const int authConfirm = 18;
   static const int login = 19;
 
+  /// Серверный push «сессия завершена» (wkc.LOGOUT). Приходит с cmd=0 без
+  /// тела, после него сервер закрывает сокет. Токен после этого мёртв:
+  /// переподключаться им нельзя (каждая попытка — лишний сигнал антифроду),
+  /// нужно разлогинить и показать экран входа.
+  static const int logout = 20;
+
   /// CONFIG (op 22): пользовательские настройки приватности —
   /// {settings: {user: {app.privacy.*: ALL|CONTACTS|NOBODY}}}.
   /// Источник: web.max.ru (send 22 {settings:{user}}) + APK (izi.java).
@@ -152,11 +158,18 @@ class AppMeta {
   /// с которого одновременно живут несколько номеров.
   static const String deviceIdKeySuffix = 'device_id';
 
+  /// userId ВЛАДЕЛЬЦА локальной БД слота. Пишется ТОЛЬКО из onLoginUser после
+  /// сверки/очистки БД — в отличие от userIdKeySuffix, который _captureProfile
+  /// записывает ещё до LOGIN и потому не годится для проверки «сменился ли
+  /// владелец» (см. account_runtime).
+  static const String dbOwnerKeySuffix = 'db_owner';
+
   static const List<String> accountKeySuffixes = [
     tokenKeySuffix,
     userIdKeySuffix,
     tokenKindKeySuffix,
     deviceIdKeySuffix,
+    dbOwnerKeySuffix,
   ];
 
   /// Полное имя ключа Keychain для аккаунта.

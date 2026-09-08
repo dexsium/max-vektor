@@ -43,6 +43,16 @@ class SecureStorage {
   Future<void> deleteMyUserId() =>
       _backend.delete(key: _key(AppMeta.userIdKeySuffix));
 
+  /// Владелец локальной БД слота (см. AppMeta.dbOwnerKeySuffix).
+  Future<int?> readDbOwnerId() async {
+    final v = await _backend.read(key: _key(AppMeta.dbOwnerKeySuffix));
+    if (v == null) return null;
+    return int.tryParse(v);
+  }
+
+  Future<void> writeDbOwnerId(int id) =>
+      _backend.write(key: _key(AppMeta.dbOwnerKeySuffix), value: '$id');
+
   /// Тип устройства, под которым выдан токен: 'web' (веб-токен из
   /// web.max.ru) или 'android' (вход по SMS). Нужно чтобы при восстановлении
   /// сессии слать серверу тот же deviceType — иначе токен не примут.
