@@ -257,7 +257,7 @@
   "msgReplyNotConfirmed": "Impossibile rispondere: il messaggio non è ancora confermato dal server",
   "msgForwardTextOnly": "Per ora si inoltrano solo messaggi di testo",
   "sendAttachFailed": "Impossibile inviare l'allegato",
-  "diagHint": "Log di connessione e protocollo ({count} righe). Token e codici non vengono registrati. Copiali e inviali per la risoluzione dei problemi.",
+  "diagHint": "Log di connessione e protocollo ({count} righe). Sopravvivono a riavvii e crash — salvati sul dispositivo. Token e codici non vengono registrati. Copiali e inviali per la risoluzione dei problemi.",
   "diagEmpty": "Ancora nessun log.",
   "diagCopyAll": "Copia tutto",
   "diagCopied": "Log copiati",

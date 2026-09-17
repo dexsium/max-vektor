@@ -257,7 +257,7 @@
   "msgReplyNotConfirmed": "Não é possível responder: a mensagem ainda não foi confirmada pelo servidor",
   "msgForwardTextOnly": "Por agora só se reencaminham mensagens de texto",
   "sendAttachFailed": "Não foi possível enviar o anexo",
-  "diagHint": "Registos de ligação e protocolo ({count} linhas). Tokens e códigos não são registados. Copia e envia para resolução de problemas.",
+  "diagHint": "Registos de ligação e protocolo ({count} linhas). Sobrevivem a reinícios e falhas — guardados no dispositivo. Tokens e códigos não são registados. Copia e envia para resolução de problemas.",
   "diagEmpty": "Ainda sem registos.",
   "diagCopyAll": "Copiar tudo",
   "diagCopied": "Registos copiados",

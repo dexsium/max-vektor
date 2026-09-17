@@ -792,7 +792,7 @@ class LIt extends L {
 
   @override
   String diagHint(Object count) {
-    return 'Log di connessione e protocollo ($count righe). Token e codici non vengono registrati. Copiali e inviali per la risoluzione dei problemi.';
+    return 'Log di connessione e protocollo ($count righe). Sopravvivono a riavvii e crash — salvati sul dispositivo. Token e codici non vengono registrati. Copiali e inviali per la risoluzione dei problemi.';
   }
 
   @override

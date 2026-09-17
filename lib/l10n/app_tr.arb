@@ -257,7 +257,7 @@
   "msgReplyNotConfirmed": "Yanıtlanamıyor: mesaj sunucu tarafından henüz onaylanmadı",
   "msgForwardTextOnly": "Şimdilik yalnızca metin mesajları iletiliyor",
   "sendAttachFailed": "Ek gönderilemedi",
-  "diagHint": "Bağlantı ve protokol günlükleri ({count} satır). Belirteçler ve kodlar kaydedilmez. Sorun gidermek için kopyalayıp gönder.",
+  "diagHint": "Bağlantı ve protokol günlükleri ({count} satır). Yeniden başlatma ve çökmelerden sonra korunur — cihaza kaydedilir. Belirteçler ve kodlar kaydedilmez. Sorun gidermek için kopyalayıp gönder.",
   "diagEmpty": "Henüz günlük yok.",
   "diagCopyAll": "Tümünü kopyala",
   "diagCopied": "Günlükler kopyalandı",

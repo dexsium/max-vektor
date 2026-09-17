@@ -275,7 +275,7 @@
   "msgForwardTextOnly": "Only text messages can be forwarded for now",
   "sendAttachFailed": "Couldn't send the attachment",
 
-  "diagHint": "Connection and protocol logs ({count} lines). Tokens and codes are not recorded. Copy and send them for troubleshooting.",
+  "diagHint": "Connection and protocol logs ({count} lines). Survive restarts and crashes — saved to disk. Tokens and codes are not recorded. Copy and send them for troubleshooting.",
   "@diagHint": { "placeholders": { "count": {} } },
   "diagEmpty": "No logs yet.",
   "diagCopyAll": "Copy all",

@@ -794,7 +794,7 @@ class LFr extends L {
 
   @override
   String diagHint(Object count) {
-    return 'Journaux de connexion et de protocole ($count lignes). Les jetons et codes ne sont pas enregistrés. Copiez-les et envoyez-les pour le dépannage.';
+    return 'Journaux de connexion et de protocole ($count lignes). Survivent aux redémarrages et plantages — enregistrés sur l\'appareil. Les jetons et codes ne sont pas enregistrés. Copiez-les et envoyez-les pour le dépannage.';
   }
 
   @override

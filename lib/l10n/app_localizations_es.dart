@@ -793,7 +793,7 @@ class LEs extends L {
 
   @override
   String diagHint(Object count) {
-    return 'Registros de conexión y protocolo ($count líneas). No se registran tokens ni códigos. Cópialos y envíalos para solucionar el problema.';
+    return 'Registros de conexión y protocolo ($count líneas). Sobreviven a reinicios y fallos — se guardan en el dispositivo. No se registran tokens ni códigos. Cópialos y envíalos para solucionar el problema.';
   }
 
   @override

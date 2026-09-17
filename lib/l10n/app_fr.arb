@@ -257,7 +257,7 @@
   "msgReplyNotConfirmed": "Impossible de répondre : le message n'est pas encore confirmé par le serveur",
   "msgForwardTextOnly": "Pour l'instant, seuls les messages texte sont transférés",
   "sendAttachFailed": "Impossible d'envoyer la pièce jointe",
-  "diagHint": "Journaux de connexion et de protocole ({count} lignes). Les jetons et codes ne sont pas enregistrés. Copiez-les et envoyez-les pour le dépannage.",
+  "diagHint": "Journaux de connexion et de protocole ({count} lignes). Survivent aux redémarrages et plantages — enregistrés sur l'appareil. Les jetons et codes ne sont pas enregistrés. Copiez-les et envoyez-les pour le dépannage.",
   "diagEmpty": "Aucun journal pour l'instant.",
   "diagCopyAll": "Tout copier",
   "diagCopied": "Journaux copiés",

@@ -786,7 +786,7 @@ class LEn extends L {
 
   @override
   String diagHint(Object count) {
-    return 'Connection and protocol logs ($count lines). Tokens and codes are not recorded. Copy and send them for troubleshooting.';
+    return 'Connection and protocol logs ($count lines). Survive restarts and crashes — saved to disk. Tokens and codes are not recorded. Copy and send them for troubleshooting.';
   }
 
   @override

@@ -793,7 +793,7 @@ class LDe extends L {
 
   @override
   String diagHint(Object count) {
-    return 'Verbindungs- und Protokoll-Logs ($count Zeilen). Tokens und Codes werden nicht aufgezeichnet. Kopiere und sende sie zur Fehlersuche.';
+    return 'Verbindungs- und Protokoll-Logs ($count Zeilen). Überstehen Neustarts und Abstürze — auf dem Gerät gespeichert. Tokens und Codes werden nicht aufgezeichnet. Kopiere und sende sie zur Fehlersuche.';
   }
 
   @override

@@ -257,7 +257,7 @@
   "msgReplyNotConfirmed": "Antwort nicht möglich: Die Nachricht ist vom Server noch nicht bestätigt",
   "msgForwardTextOnly": "Vorerst werden nur Textnachrichten weitergeleitet",
   "sendAttachFailed": "Anhang konnte nicht gesendet werden",
-  "diagHint": "Verbindungs- und Protokoll-Logs ({count} Zeilen). Tokens und Codes werden nicht aufgezeichnet. Kopiere und sende sie zur Fehlersuche.",
+  "diagHint": "Verbindungs- und Protokoll-Logs ({count} Zeilen). Überstehen Neustarts und Abstürze — auf dem Gerät gespeichert. Tokens und Codes werden nicht aufgezeichnet. Kopiere und sende sie zur Fehlersuche.",
   "diagEmpty": "Noch keine Logs.",
   "diagCopyAll": "Alles kopieren",
   "diagCopied": "Logs kopiert",

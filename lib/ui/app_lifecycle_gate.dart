@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/diagnostics_session.dart';
 import '../data/account/account_runtime.dart';
 import '../state/providers.dart';
 
@@ -48,6 +49,14 @@ class _AppLifecycleGateState extends ConsumerState<AppLifecycleGate>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Каждый переход — в лог И в маркер на диске (криминалистика запуска,
+    // см. MvDiagnosticsSession): если приложение не доживёт до следующего
+    // запуска, здесь останется след, ушло оно в фон штатно или пропало
+    // прямо на переднем плане. При уходе с переднего плана форсируем сброс
+    // накопленных строк лога на диск — периодический таймер может не успеть
+    // тикнуть перед тем, как ОС убьёт процесс сразу после сворачивания.
+    unawaited(MvDiagnosticsSession.onLifecycleChange(state.name));
+
     if (state != AppLifecycleState.resumed) return;
     final accountId = ref.read(activeAccountIdProvider);
     // Соединение аккаунта ещё не поднято (экран входа/первый запуск) —

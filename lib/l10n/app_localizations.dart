@@ -1566,7 +1566,7 @@ abstract class L {
   /// No description provided for @diagHint.
   ///
   /// In ru, this message translates to:
-  /// **'Логи соединения и протокола ({count} строк). Токены и коды не записываются. Скопируйте и пришлите для разбора проблемы.'**
+  /// **'Логи соединения и протокола ({count} строк). Переживают перезапуск и крэш — сохраняются на диск. Токены и коды не записываются. Скопируйте и пришлите для разбора проблемы.'**
   String diagHint(Object count);
 
   /// No description provided for @diagEmpty.

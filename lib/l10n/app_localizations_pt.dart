@@ -792,7 +792,7 @@ class LPt extends L {
 
   @override
   String diagHint(Object count) {
-    return 'Registos de ligação e protocolo ($count linhas). Tokens e códigos não são registados. Copia e envia para resolução de problemas.';
+    return 'Registos de ligação e protocolo ($count linhas). Sobrevivem a reinícios e falhas — guardados no dispositivo. Tokens e códigos não são registados. Copia e envia para resolução de problemas.';
   }
 
   @override

@@ -788,7 +788,7 @@ class LTr extends L {
 
   @override
   String diagHint(Object count) {
-    return 'Bağlantı ve protokol günlükleri ($count satır). Belirteçler ve kodlar kaydedilmez. Sorun gidermek için kopyalayıp gönder.';
+    return 'Bağlantı ve protokol günlükleri ($count satır). Yeniden başlatma ve çökmelerden sonra korunur — cihaza kaydedilir. Belirteçler ve kodlar kaydedilmez. Sorun gidermek için kopyalayıp gönder.';
   }
 
   @override
